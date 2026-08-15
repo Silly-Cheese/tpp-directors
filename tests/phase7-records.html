@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Phase 7 Records QA</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 900px; margin: 40px auto; padding: 0 20px; color: #172033; }
+    h1 { margin-bottom: 6px; }
+    p { color: #667085; }
+    .pass { color: #15704e; }
+    .fail { color: #a13f31; }
+    li { margin: 8px 0; }
+  </style>
+</head>
+<body>
+  <h1>Phase 7 Permanent Record QA</h1>
+  <p>Non-destructive browser checks for minutes labels and certified-record summary logic. This page does not write to Firebase.</p>
+  <ol id="results"></ol>
+  <script type="module">
+    import { minutesStatusLabel, summarizeCertifiedRecord } from "../js/minutes-data.js";
+    import { VOTE_STATUSES, calculateVoteResult } from "../js/governance-data.js";
+
+    const results = document.querySelector("#results");
+    let failures = 0;
+    function test(name, condition, detail = "") {
+      const item = document.createElement("li");
+      item.className = condition ? "pass" : "fail";
+      item.textContent = `${condition ? "PASS" : "FAIL"} — ${name}${detail ? `: ${detail}` : ""}`;
+      results.append(item);
+      if (!condition) failures += 1;
+    }
+
+    test("ready status label", minutesStatusLabel("ready") === "Ready");
+    test("certified status label", minutesStatusLabel("certified") === "Certified");
+    test("Phase 6 includes closing state", VOTE_STATUSES.includes("closing"));
+
+    const entries = [
+      { entryType: "attendance" }, { entryType: "attendance" },
+      { entryType: "agenda" }, { entryType: "motion" },
+      { entryType: "vote" }, { entryType: "resolution" }, { entryType: "recusal" }
+    ];
+    const summary = summarizeCertifiedRecord({ recordNumber: "BMR-2026-ABC123" }, entries);
+    test("attendance snapshot count", summary.attendanceCount === 2);
+    test("agenda snapshot count", summary.agendaCount === 1);
+    test("vote snapshot count", summary.voteCount === 1);
+    test("resolution snapshot count", summary.resolutionCount === 1);
+    test("recusal snapshot count", summary.recusalCount === 1);
+
+    const simple = calculateVoteResult("simple_majority_cast", { approve: 3, oppose: 2, abstain: 1 }, 6);
+    test("simple majority result survives Phase 6 finalization", simple.adopted === true && simple.required === 3);
+
+    const twoThirds = calculateVoteResult("two_thirds_cast", { approve: 4, oppose: 2, abstain: 1 }, 7);
+    test("two-thirds threshold result", twoThirds.adopted === true && twoThirds.required === 4);
+
+    const summaryText = document.createElement("p");
+    summaryText.innerHTML = failures === 0
+      ? '<strong class="pass">All tests passed.</strong>'
+      : `<strong class="fail">${failures} test(s) failed.</strong>`;
+    document.body.append(summaryText);
+  </script>
+</body>
+</html>
