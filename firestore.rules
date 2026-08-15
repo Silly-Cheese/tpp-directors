@@ -38,6 +38,67 @@ service cloud.firestore {
     }
     function optionalGoogleUrl(value) { return value == null || googleUrl(value); }
 
+    // One-time Founder bootstrap. This exception is bound to one Firebase Auth UID
+    // and closes permanently as soon as the protected Founder director record exists.
+    function founderBootstrapAuth() {
+      return signedIn() && request.auth.uid == 'QuctEgPv6laYa98bGaLasSdSERk1';
+    }
+    function founderBootstrapOpen() {
+      return founderBootstrapAuth() && !exists(dPath('QuctEgPv6laYa98bGaLasSdSERk1'));
+    }
+    function founderBootstrapDirector(id) {
+      return founderBootstrapOpen()
+        && id == 'QuctEgPv6laYa98bGaLasSdSERk1'
+        && request.resource.data.directorNumber == 'DIR-000001'
+        && request.resource.data.fullName == 'Christopher Shelley'
+        && request.resource.data.normalizedName == 'christopher shelley'
+        && request.resource.data.loginKey == '1003e917ed8c7dba3019775969f12c8cc751e5cc9e18a011b6719a7efc2d9e76'
+        && request.resource.data.displayName == 'Christopher Shelley'
+        && request.resource.data.boardRole == 'Founder Director'
+        && request.resource.data.boardStatus == 'interim'
+        && request.resource.data.systemRole == 'founder_director'
+        && request.resource.data.root == true
+        && request.resource.data.accountStatus == 'awaiting_activation'
+        && request.resource.data.votingStatus == 'eligible'
+        && request.resource.data.directoryVisible == true
+        && request.resource.data.permissions is list
+        && request.resource.data.permissions.size() == 1
+        && request.resource.data.permissions[0] == '*'
+        && request.resource.data.permissionTemplate == 'founder_root'
+        && request.resource.data.createdBy == 'first_run_bootstrap'
+        && request.resource.data.updatedBy == 'QuctEgPv6laYa98bGaLasSdSERk1'
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time;
+    }
+    function founderBootstrapDirectory(id) {
+      return founderBootstrapOpen()
+        && id == 'QuctEgPv6laYa98bGaLasSdSERk1'
+        && request.resource.data.directorNumber == 'DIR-000001'
+        && request.resource.data.fullName == 'Christopher Shelley'
+        && request.resource.data.displayName == 'Christopher Shelley'
+        && request.resource.data.boardRole == 'Founder Director'
+        && request.resource.data.boardStatus == 'interim'
+        && request.resource.data.votingStatus == 'eligible'
+        && request.resource.data.directoryVisible == true
+        && request.resource.data.updatedAt == request.time;
+    }
+    function founderBootstrapLogin(key) {
+      return founderBootstrapOpen()
+        && key == '1003e917ed8c7dba3019775969f12c8cc751e5cc9e18a011b6719a7efc2d9e76'
+        && request.resource.data.directorUid == 'QuctEgPv6laYa98bGaLasSdSERk1'
+        && request.resource.data.authEmail is string
+        && request.resource.data.activationRequired == false
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time;
+    }
+    function founderBootstrapCounter(id) {
+      return founderBootstrapOpen()
+        && id == 'counters'
+        && request.resource.data.nextDirectorNumber == 2
+        && request.resource.data.updatedBy == 'first_run_bootstrap'
+        && request.resource.data.updatedAt == request.time;
+    }
+
     function officerMayUpdateDirector(id) {
       return request.resource.data.updatedBy == request.auth.uid
         && request.resource.data.updatedAt == request.time
@@ -51,14 +112,15 @@ service cloud.firestore {
     match /directors/{id} {
       allow get: if founder() || (signedIn() && request.auth.uid == id && resource.data.accountStatus in ['awaiting_activation','active','pin_reset_required']);
       allow list: if founder();
-      allow create: if founder()
+      allow create: if (founder()
         && request.resource.data.root == false
         && request.resource.data.systemRole == 'director'
         && request.resource.data.accountStatus == 'awaiting_activation'
         && request.resource.data.directorNumber is string
         && request.resource.data.fullName is string
         && request.resource.data.loginKey is string
-        && request.resource.data.permissions is list;
+        && request.resource.data.permissions is list)
+        || founderBootstrapDirector(id);
       allow update: if (
         founder() && resource.data.root != true
         && request.resource.data.root == false
@@ -83,10 +145,11 @@ service cloud.firestore {
     }
     match /boardDirectory/{id} {
       allow get, list: if founder() || (cap('directors.view') && resource.data.directoryVisible == true);
-      allow create: if founder()
+      allow create: if (founder()
         && request.resource.data.directorNumber is string
         && request.resource.data.fullName is string
-        && request.resource.data.boardStatus in ['interim','confirmed','leave_of_absence','former'];
+        && request.resource.data.boardStatus in ['interim','confirmed','leave_of_absence','former'])
+        || founderBootstrapDirectory(id);
       allow update: if (
         founder()
         && request.resource.data.directorNumber is string
@@ -99,7 +162,7 @@ service cloud.firestore {
     match /loginDirectory/{key} {
       allow get: if true;
       allow list: if false;
-      allow create: if founder() && request.resource.data.directorUid is string && request.resource.data.authEmail is string && request.resource.data.activationRequired == true;
+      allow create: if (founder() && request.resource.data.directorUid is string && request.resource.data.authEmail is string && request.resource.data.activationRequired == true) || founderBootstrapLogin(key);
       allow update: if founder() || (
         signedIn() && resource.data.directorUid == request.auth.uid
         && request.resource.data.directorUid == resource.data.directorUid
@@ -792,7 +855,8 @@ service cloud.firestore {
     }
 
     match /system/{id} {
-      allow read, create, update: if founder();
+      allow read, update: if founder();
+      allow create: if founder() || founderBootstrapCounter(id);
       allow delete: if false;
     }
     match /auditEvents/{id} {
