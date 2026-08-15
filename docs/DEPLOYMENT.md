@@ -45,7 +45,7 @@ There is intentionally no `firestore.indexes.json`.
 
 `firebase.json` references only `firestore.rules`.
 
-Do not create manual/composite indexes for the portal. Phase 1-4 query design uses direct reads, role-authorized full collection reads, or separate single-field equality / `array-contains` queries with browser-side merge/filter/sort.
+Do not create manual/composite indexes for the portal. Phase 1–5 query design uses direct reads, authorized plain collection reads, or one single-field equality / `array-contains` query at a time with browser-side merge/filter/sort.
 
 ## 5. Founder bootstrap
 
@@ -89,16 +89,19 @@ Verify:
 
 ## 8. Phase 4 document verification
 
-Create at least one Standard Director and one account with `documents.review`, then verify the following.
+Create at least one Standard Director and one account with `documents.review`.
 
 ### Google-link-only submission
+
+Verify:
 
 - the portal contains no file input;
 - Google Docs links are accepted;
 - Google Sheets links are identified correctly;
 - Google Slides links are identified correctly;
 - Google Drive links are accepted;
-- non-Google URLs are rejected;
+- non-Google URLs are rejected by the client;
+- a direct Firestore attempt to write a non-Google document URL is rejected by Security Rules;
 - HTTP/non-HTTPS Google links are rejected;
 - the underlying Google file still requires appropriate Drive sharing permissions.
 
@@ -110,9 +113,9 @@ Verify with separate accounts:
 - **Board Officers** records are not readable by non-officers;
 - **Board Officers** records are readable by an officer with `documents.view`;
 - **Selected Directors** records are readable only by selected UIDs, the submitter, reviewers, and Founder root;
-- **Founder Director Only** records are not returned to ordinary directors;
-- the submitting director can still see their own restricted/Founder-only submission;
-- reviewers can read the full document review set.
+- **Founder Director Only** records are not returned to ordinary directors or non-Founder reviewers;
+- the submitting director can still see their own Founder-only submission;
+- Founder root can review Founder-only records.
 
 ### Board Inbox and lifecycle
 
@@ -127,45 +130,110 @@ Verify:
 - permitted approve/reject/table transitions work;
 - invalid status jumps are rejected by the client and Firestore rules;
 - archived records cannot be reopened directly;
-- every lifecycle operation creates an append-only `documentEvents` entry;
+- every accepted lifecycle mutation creates an append-only `documentEvents` entry;
+- each mutation changes `lastEventId` to a fresh event ID;
+- trying to reuse an existing event ID in `lastEventId` is rejected;
+- trying to create an unrelated event whose ID does not equal the document's reserved `lastEventId` is rejected;
 - the record detail page opens the Google link in a new tab;
 - search/category/status filters work client-side.
 
-### No-index verification
+## 9. Phase 5 meeting verification
 
-Phase 4 must not prompt for a manual/composite index.
+Create at least two voting-eligible directors plus accounts with the relevant meeting permissions.
 
-The ordinary-document read strategy intentionally uses separate queries such as:
+### Meeting creation
 
-```text
-submittedBy == currentUid
-accessScope == board
-accessScope == officers
-allowedDirectorUids array-contains currentUid
-```
+Verify:
 
-Those result sets are merged/deduplicated in JavaScript.
+- an account without `meetings.create` cannot create a meeting;
+- an authorized creator can create Regular, Special, Organizational, and Emergency meetings;
+- meeting mode accepts In Person, Virtual, and Hybrid;
+- meeting numbers use `BM-YYYY-XXXXXX`;
+- the invited roster is stored as a snapshot;
+- the voting-eligible invited roster is stored separately;
+- deterministic `meetingAttendance/{meetingId}_{directorUid}` records are created for invitees;
+- a direct attempt to create a duplicate/mismatched attendance document ID is rejected;
+- quorum cannot exceed the number of invited voting-eligible directors;
+- leaving quorum blank uses the client majority helper;
+- no meeting creation query requests a manual/composite index.
 
-Document history uses:
+### Activation and self check-in
 
-```text
-documentId == selectedDocumentId
-```
+Verify:
 
-No combined query/orderBy is used.
+- `scheduled -> checkin_open` requires `meetings.activate`;
+- an invited director can self-check-in after check-in opens;
+- a non-invited director cannot create or mutate an attendance record to join the meeting;
+- self check-in sets `presenceStatus: present` and `checkedInAt`;
+- a departed director can return and receives `returnedAt`;
+- return/self check-in remains available during recess;
+- self check-in is rejected while the meeting is merely Scheduled;
+- self check-in is rejected after Adjourned or Cancelled.
 
-## 9. Browser QA harnesses
+### Attendance and quorum
+
+Verify:
+
+- `meetings.attendance.manage` is required to change another director's attendance;
+- attendance managers can mark Excused before check-in opens;
+- Present / Departed / Absent cannot be recorded before check-in opens;
+- live attendance changes appear on another signed-in device without refresh;
+- non-voting directors may be marked Present but do not increase the voting quorum count;
+- a voting-eligible Present director increases the quorum count;
+- marking that director Departed immediately reduces the quorum count;
+- quorum is derived from attendance and is not stored as a writable `quorumAchieved` field;
+- attendance changes are rejected after Adjourned or Cancelled.
+
+### Live meeting control
+
+Verify:
+
+- Call to Order requires `meetings.control`;
+- `checkin_open -> in_session` works;
+- `in_session -> recessed` works;
+- `recessed -> in_session` works;
+- `in_session/recessed -> adjourned` works;
+- Scheduled/Check-In Open meetings can be Cancelled by an authorized controller;
+- an Adjourned meeting cannot be reopened through Phase 5;
+- meeting lifecycle writes cannot alter invited roster, eligible-voter snapshot, quorum requirement, meeting number, or creator fields;
+- the dashboard meeting banner reflects an active/open meeting;
+- the Meeting Room shows live status and quorum on multiple devices.
+
+## 10. Browser QA harnesses
 
 Serve the repo locally over HTTP and open:
 
 ```text
 /tests/phase2-phase3.html
 /tests/phase4-documents.html
+/tests/phase5-meetings.html
 ```
 
-The Phase 4 harness validates Google-link handling, category/access normalization, human-readable statuses, and review-transition rules without writing to Firebase.
+The harnesses are non-destructive. Phase 5 validates majority quorum calculation, attendance-derived quorum, readable meeting status labels, and allowed/forbidden meeting lifecycle transitions.
 
-## 10. Products intentionally not used
+## 11. No-index verification
+
+Phase 4/5 must not prompt for a manual/composite index.
+
+Representative Phase 4 single-field reads:
+
+```text
+submittedBy == currentUid
+accessScope == board
+accessScope == officers
+allowedDirectorUids array-contains currentUid
+documentId == selectedDocumentId
+```
+
+Representative Phase 5 attendance read:
+
+```text
+meetingId == selectedMeetingId
+```
+
+Meeting lists are authorized plain collection reads. Sorting/searching/filtering/quorum calculation happen in the browser.
+
+## 12. Products intentionally not used
 
 - Firebase Hosting
 - Firebase Storage
