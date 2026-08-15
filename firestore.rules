@@ -5,20 +5,20 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    function ownDirectorRecord() {
-      return /databases/$(database)/documents/directors/$(request.auth.uid);
+    function directorPath(uid) {
+      return /databases/$(database)/documents/directors/$(uid);
     }
 
-    function hasDirectorRecord() {
-      return signedIn() && exists(ownDirectorRecord());
+    function hasDirectorRecord(uid) {
+      return signedIn() && exists(directorPath(uid));
     }
 
     function currentDirector() {
-      return get(ownDirectorRecord()).data;
+      return get(directorPath(request.auth.uid)).data;
     }
 
     function activeDirector() {
-      return hasDirectorRecord()
+      return hasDirectorRecord(request.auth.uid)
         && currentDirector().accountStatus == 'active';
     }
 
@@ -28,17 +28,104 @@ service cloud.firestore {
         && currentDirector().root == true;
     }
 
-    // Phase 1: directors may read only their own active profile.
-    // Founder Director may read director records for administration.
-    match /directors/{directorId} {
-      allow read: if activeDirector()
-        && (request.auth.uid == directorId || founderDirector());
-      allow create, update, delete: if false;
+    function selfMayReadDirector(directorId) {
+      return signedIn()
+        && request.auth.uid == directorId
+        && resource.data.accountStatus in ['awaiting_activation', 'active', 'pin_reset_required'];
     }
 
-    // All governance collections remain closed until their Phase-specific
-    // rules are implemented. This prevents an unfinished UI from creating
-    // an unintended authorization path.
+    function founderMayCreateDirector() {
+      return founderDirector()
+        && request.resource.data.root == false
+        && request.resource.data.systemRole == 'director'
+        && request.resource.data.accountStatus == 'awaiting_activation'
+        && request.resource.data.directorNumber is string
+        && request.resource.data.fullName is string
+        && request.resource.data.normalizedName is string
+        && request.resource.data.loginKey is string
+        && request.resource.data.permissions is list;
+    }
+
+    function founderMayUpdateOrdinaryDirector() {
+      return founderDirector()
+        && resource.data.root != true
+        && request.resource.data.root == false
+        && request.resource.data.systemRole != 'founder_director'
+        && request.resource.data.directorNumber == resource.data.directorNumber
+        && request.resource.data.loginKey == resource.data.loginKey
+        && request.resource.data.normalizedName == resource.data.normalizedName;
+    }
+
+    function selfMayCompleteActivation(directorId) {
+      return signedIn()
+        && request.auth.uid == directorId
+        && resource.data.root != true
+        && resource.data.accountStatus == 'awaiting_activation'
+        && request.resource.data.accountStatus == 'active'
+        && request.resource.data.updatedBy == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'accountStatus',
+          'activationCompletedAt',
+          'updatedAt',
+          'updatedBy'
+        ]);
+    }
+
+    match /directors/{directorId} {
+      allow get: if founderDirector() || selfMayReadDirector(directorId);
+      allow list: if founderDirector();
+      allow create: if founderMayCreateDirector();
+      allow update: if founderMayUpdateOrdinaryDirector() || selfMayCompleteActivation(directorId);
+      allow delete: if false;
+    }
+
+    // The login directory is keyed by SHA-256(normalized full name). Signed-out
+    // clients may fetch one exact record after a name is entered, but collection
+    // listing is never public. The record contains an opaque Firebase Auth alias,
+    // not a director email address or PIN.
+    match /loginDirectory/{loginKey} {
+      allow get: if true;
+      allow list: if false;
+
+      allow create: if founderDirector()
+        && request.resource.data.directorUid is string
+        && request.resource.data.authEmail is string
+        && request.resource.data.activationRequired == true;
+
+      allow update: if founderDirector()
+        || (
+          signedIn()
+          && resource.data.directorUid == request.auth.uid
+          && request.resource.data.directorUid == resource.data.directorUid
+          && request.resource.data.authEmail == resource.data.authEmail
+          && resource.data.activationRequired == true
+          && request.resource.data.activationRequired == false
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'activationRequired',
+            'activatedAt',
+            'updatedAt'
+          ])
+        );
+
+      allow delete: if false;
+    }
+
+    // Phase 2 uses a single counter document for human-readable director numbers.
+    // All sorting and filtering of director lists is performed client-side so no
+    // manual/composite Firestore indexes are required.
+    match /system/{systemDocument} {
+      allow read, create, update: if founderDirector();
+      allow delete: if false;
+    }
+
+    match /auditEvents/{eventId} {
+      allow get, list: if founderDirector();
+      allow create: if founderDirector()
+        && request.resource.data.actorUid == request.auth.uid;
+      allow update, delete: if false;
+    }
+
+    // Governance collections remain closed until their implementation phases.
     match /{document=**} {
       allow read, write: if false;
     }
