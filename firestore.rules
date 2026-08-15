@@ -183,6 +183,9 @@ service cloud.firestore {
         && request.resource.data.revisionNumber == 1
         && request.resource.data.lastEventId is string
         && !exists(documentEventPath(request.resource.data.lastEventId))
+        && request.resource.data.submittedAt == request.time
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time
         && validDocumentAccess(request.resource.data);
     }
 
@@ -202,6 +205,7 @@ service cloud.firestore {
         && request.resource.data.lastEventId != resource.data.lastEventId
         && !exists(documentEventPath(request.resource.data.lastEventId))
         && request.resource.data.updatedBy == request.auth.uid
+        && request.resource.data.updatedAt == request.time
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
           'title', 'description', 'documentUrl', 'linkType', 'requestedAction',
           'status', 'revisionNumber', 'reviewNote', 'reviewedBy',
@@ -242,6 +246,8 @@ service cloud.firestore {
         && request.resource.data.lastEventId != resource.data.lastEventId
         && !exists(documentEventPath(request.resource.data.lastEventId))
         && request.resource.data.updatedBy == request.auth.uid
+        && request.resource.data.reviewedAt == request.time
+        && request.resource.data.updatedAt == request.time
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
           'status', 'reviewNote', 'reviewedBy', 'reviewedByName',
           'reviewedAt', 'archivedAt', 'lastEventId', 'updatedAt', 'updatedBy'
@@ -262,6 +268,8 @@ service cloud.firestore {
         && request.resource.data.lastEventId != resource.data.lastEventId
         && !exists(documentEventPath(request.resource.data.lastEventId))
         && request.resource.data.updatedBy == request.auth.uid
+        && request.resource.data.reviewedAt == request.time
+        && request.resource.data.updatedAt == request.time
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
           'status', 'reviewNote', 'reviewedBy', 'reviewedByName',
           'reviewedAt', 'archivedAt', 'lastEventId', 'updatedAt', 'updatedBy'
@@ -291,6 +299,7 @@ service cloud.firestore {
         && documentAfter(request.resource.data.documentId).submittedBy == request.auth.uid
         && documentAfter(request.resource.data.documentId).status == 'submitted'
         && documentAfter(request.resource.data.documentId).revisionNumber == 1
+        && request.resource.data.createdAt == request.time
         && request.resource.data.createdAt == documentAfter(request.resource.data.documentId).createdAt;
     }
 
@@ -301,6 +310,7 @@ service cloud.firestore {
         && documentAfter(request.resource.data.documentId).submittedBy == request.auth.uid
         && documentAfter(request.resource.data.documentId).status == 'submitted'
         && documentAfter(request.resource.data.documentId).revisionNumber == documentBefore(request.resource.data.documentId).revisionNumber + 1
+        && request.resource.data.createdAt == request.time
         && request.resource.data.createdAt == documentAfter(request.resource.data.documentId).updatedAt
         && (
           (request.resource.data.type == 'resubmitted' && documentBefore(request.resource.data.documentId).status == 'returned_for_revision')
@@ -314,6 +324,7 @@ service cloud.firestore {
         && documentAfter(request.resource.data.documentId).status == request.resource.data.type
         && documentAfter(request.resource.data.documentId).reviewedBy == request.auth.uid
         && documentBefore(request.resource.data.documentId).status != documentAfter(request.resource.data.documentId).status
+        && request.resource.data.createdAt == request.time
         && request.resource.data.createdAt == documentAfter(request.resource.data.documentId).updatedAt
         && (
           founderDirector()
@@ -355,7 +366,9 @@ service cloud.firestore {
         && request.resource.data.quorumRequired > 0
         && request.resource.data.quorumRequired <= request.resource.data.eligibleVotingDirectorUids.size()
         && request.resource.data.createdBy == request.auth.uid
-        && request.resource.data.updatedBy == request.auth.uid;
+        && request.resource.data.updatedBy == request.auth.uid
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time;
     }
 
     function validMeetingActivation() {
@@ -363,6 +376,8 @@ service cloud.firestore {
         && resource.data.status == 'scheduled'
         && request.resource.data.status == 'checkin_open'
         && request.resource.data.updatedBy == request.auth.uid
+        && request.resource.data.checkInOpenedAt == request.time
+        && request.resource.data.updatedAt == request.time
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
           'status', 'checkInOpenedAt', 'updatedAt', 'updatedBy'
         ]);
@@ -371,30 +386,37 @@ service cloud.firestore {
     function validMeetingControl() {
       return hasCapability('meetings.control')
         && request.resource.data.updatedBy == request.auth.uid
+        && request.resource.data.updatedAt == request.time
         && (
           (
             resource.data.status == 'scheduled'
             && request.resource.data.status == 'cancelled'
+            && request.resource.data.cancelledAt == request.time
             && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'cancelledAt', 'updatedAt', 'updatedBy'])
           ) || (
             resource.data.status == 'checkin_open'
             && request.resource.data.status == 'in_session'
+            && request.resource.data.calledToOrderAt == request.time
             && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'calledToOrderAt', 'updatedAt', 'updatedBy'])
           ) || (
             resource.data.status == 'checkin_open'
             && request.resource.data.status == 'cancelled'
+            && request.resource.data.cancelledAt == request.time
             && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'cancelledAt', 'updatedAt', 'updatedBy'])
           ) || (
             resource.data.status == 'in_session'
             && request.resource.data.status == 'recessed'
+            && request.resource.data.recessedAt == request.time
             && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'recessedAt', 'updatedAt', 'updatedBy'])
           ) || (
             resource.data.status == 'recessed'
             && request.resource.data.status == 'in_session'
+            && request.resource.data.resumedAt == request.time
             && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'resumedAt', 'updatedAt', 'updatedBy'])
           ) || (
             resource.data.status in ['in_session', 'recessed']
             && request.resource.data.status == 'adjourned'
+            && request.resource.data.adjournedAt == request.time
             && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'adjournedAt', 'updatedAt', 'updatedBy'])
           )
         );
@@ -425,7 +447,9 @@ service cloud.firestore {
         && request.resource.data.directorUid in meetingAfter(request.resource.data.meetingId).invitedDirectorUids
         && request.resource.data.votingEligible == (request.resource.data.directorUid in meetingAfter(request.resource.data.meetingId).eligibleVotingDirectorUids)
         && request.resource.data.presenceStatus == 'invited'
-        && request.resource.data.updatedBy == request.auth.uid;
+        && request.resource.data.updatedBy == request.auth.uid
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time;
     }
 
     function selfMayCheckIn() {
