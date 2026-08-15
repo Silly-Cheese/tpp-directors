@@ -12,6 +12,7 @@ import { hasPermission, PERMISSIONS } from "./permissions.js";
 
 let profile = null;
 let initialized = false;
+let observerFrame = null;
 
 function resolutionNumber(id) {
   return `BR-${new Date().getFullYear()}-${String(id).slice(0, 6).toUpperCase()}`;
@@ -129,31 +130,46 @@ async function finalizeClosingVote(voteId) {
 
 function setMessage(voteId, text) {
   const target = document.querySelector(`[data-phase6-vote-card-message="${CSS.escape(voteId)}"]`);
-  if (target) target.textContent = text;
+  if (target && target.textContent !== text) target.textContent = text;
+}
+
+async function inspectClosingButton(button) {
+  if (!button?.isConnected || button.dataset.phase6RecoveryChecked === "true") return;
+  button.dataset.phase6RecoveryChecked = "true";
+  const voteId = button.dataset.phase6CloseVote;
+  if (!voteId) return;
+  try {
+    const snapshot = await getDoc(doc(db, "votes", voteId));
+    if (!snapshot.exists() || snapshot.data().status !== "closing" || !button.isConnected) return;
+    if (button.textContent !== "Finalize Closing Vote") button.textContent = "Finalize Closing Vote";
+    button.dataset.phase6ClosingRecovery = "true";
+    button.closest(".phase6-vote-card")?.querySelectorAll("[data-phase6-cast]").forEach((cast) => {
+      if (!cast.disabled) cast.disabled = true;
+    });
+    const status = button.closest(".phase6-vote-card")?.querySelector(".phase6-vote-head em");
+    if (status && status.textContent !== "Closing — ballots frozen") status.textContent = "Closing — ballots frozen";
+  } catch {
+    // A future Phase 6 rerender creates a fresh button and will retry automatically.
+  }
 }
 
 function markClosingButtons() {
-  document.querySelectorAll("[data-phase6-close-vote]").forEach(async (button) => {
-    const voteId = button.dataset.phase6CloseVote;
-    try {
-      const snapshot = await getDoc(doc(db, "votes", voteId));
-      if (!snapshot.exists() || snapshot.data().status !== "closing") return;
-      button.textContent = "Finalize Closing Vote";
-      button.dataset.phase6ClosingRecovery = "true";
-      button.closest(".phase6-vote-card")?.querySelectorAll("[data-phase6-cast]").forEach((cast) => { cast.disabled = true; });
-      const status = button.closest(".phase6-vote-card")?.querySelector(".phase6-vote-head em");
-      if (status) status.textContent = "Closing — ballots frozen";
-    } catch {
-      // Snapshot listeners in Phase 6 will retry rendering on the next live update.
-    }
+  observerFrame = null;
+  document.querySelectorAll("[data-phase6-close-vote]").forEach((button) => {
+    void inspectClosingButton(button);
   });
+}
+
+function queueClosingButtonScan() {
+  if (observerFrame !== null) return;
+  observerFrame = requestAnimationFrame(markClosingButtons);
 }
 
 function init() {
   if (initialized) return;
   initialized = true;
 
-  const observer = new MutationObserver(markClosingButtons);
+  const observer = new MutationObserver(queueClosingButtonScan);
   observer.observe(document.body, { childList: true, subtree: true });
 
   document.addEventListener("click", (event) => {
@@ -172,7 +188,10 @@ function init() {
 
   onAuthStateChanged(auth, async (user) => {
     profile = user ? await loadProfile(user.uid) : null;
-    markClosingButtons();
+    document.querySelectorAll("[data-phase6-close-vote]").forEach((button) => {
+      delete button.dataset.phase6RecoveryChecked;
+    });
+    queueClosingButtonScan();
   });
 }
 
