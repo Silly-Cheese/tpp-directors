@@ -156,7 +156,7 @@
               <div>
                 <p class="eyebrow">FOUNDER DIRECTOR</p>
                 <h2>Control Center</h2>
-                <p>Create Board accounts and assign their initial access. The root Founder account remains protected from ordinary account administration.</p>
+                <p>Create Board accounts and assign their access. The root Founder account remains protected from ordinary account administration.</p>
               </div>
               <button id="refresh-directors-button" class="secondary-button" type="button">Refresh accounts</button>
             </div>
@@ -224,15 +224,83 @@
                         <th>Role</th>
                         <th>Status</th>
                         <th>Permissions</th>
+                        <th>Manage</th>
                       </tr>
                     </thead>
                     <tbody id="director-table-body">
-                      <tr><td colspan="4" class="empty-cell">Loading accounts…</td></tr>
+                      <tr><td colspan="5" class="empty-cell">Loading accounts…</td></tr>
                     </tbody>
                   </table>
                 </div>
               </article>
             </div>
+
+            <article id="manage-director-panel" class="panel manage-panel" hidden>
+              <div class="panel-heading manage-heading">
+                <div>
+                  <p class="eyebrow">ACCOUNT ACCESS</p>
+                  <h2 id="manage-director-name">Manage Director</h2>
+                  <small id="manage-director-number">DIR-000000</small>
+                </div>
+                <button id="close-manage-director" class="secondary-button" type="button">Close</button>
+              </div>
+
+              <form id="manage-director-form" class="admin-form" novalidate>
+                <input id="manage-director-uid" name="uid" type="hidden">
+                <div class="form-row">
+                  <div>
+                    <label for="manage-board-role">Board role</label>
+                    <input id="manage-board-role" name="boardRole" required>
+                  </div>
+                  <div>
+                    <label for="manage-officer-role">Officer role</label>
+                    <input id="manage-officer-role" name="officerRole" placeholder="Optional">
+                  </div>
+                </div>
+
+                <div class="form-row">
+                  <div>
+                    <label for="manage-account-status">Portal account status</label>
+                    <select id="manage-account-status" name="accountStatus">
+                      <option value="awaiting_activation">Awaiting activation</option>
+                      <option value="active">Active</option>
+                      <option value="locked">Locked</option>
+                      <option value="suspended">Suspended</option>
+                      <option value="inactive">Inactive</option>
+                      <option value="former_director">Former Director</option>
+                      <option value="archived">Archived</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label for="manage-voting-status">Voting status</label>
+                    <select id="manage-voting-status" name="votingStatus">
+                      <option value="eligible">Eligible</option>
+                      <option value="ineligible">Ineligible</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div class="permission-toolbar">
+                  <div>
+                    <label for="manage-permission-template">Load permission template</label>
+                    <select id="manage-permission-template"></select>
+                  </div>
+                  <button id="apply-permission-template" class="secondary-button" type="button">Apply template</button>
+                </div>
+
+                <fieldset class="permission-fieldset">
+                  <legend>Individual portal permissions</legend>
+                  <p>Check exactly what this director may access. Saving these selections changes this account to a custom permission set.</p>
+                  <div id="permission-checkboxes" class="permission-grid"></div>
+                </fieldset>
+
+                <div class="manage-actions">
+                  <button type="submit">Save Director Access</button>
+                  <button id="cancel-manage-director" class="secondary-button" type="button">Cancel</button>
+                </div>
+                <p id="manage-director-message" class="form-message" role="status"></p>
+              </form>
+            </article>
           </section>
         </div>
       </section>
