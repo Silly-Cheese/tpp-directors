@@ -134,10 +134,19 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    function validGoogleDocumentUrl(value) {
+      return value is string
+        && value.matches('^https://(docs|drive|sheets|slides)[.]google[.]com/.*$');
+    }
+
     function validDocumentAccess(data) {
       return data.accessScope in ['board', 'officers', 'restricted', 'founder']
         && data.allowedDirectorUids is list
-        && (data.accessScope != 'restricted' || data.allowedDirectorUids.size() > 0);
+        && data.allowedDirectorUids.size() <= 25
+        && (
+          (data.accessScope == 'restricted' && data.allowedDirectorUids.size() > 0)
+          || (data.accessScope != 'restricted' && data.allowedDirectorUids.size() == 0)
+        );
     }
 
     function canReadDocumentData(data) {
@@ -159,7 +168,7 @@ service cloud.firestore {
         && request.resource.data.documentNumber is string
         && request.resource.data.title is string
         && request.resource.data.description is string
-        && request.resource.data.documentUrl is string
+        && validGoogleDocumentUrl(request.resource.data.documentUrl)
         && request.resource.data.linkType is string
         && request.resource.data.category in [
           'governance', 'policy', 'financial', 'program', 'committee',
@@ -180,6 +189,7 @@ service cloud.firestore {
         && request.resource.data.accessScope == resource.data.accessScope
         && request.resource.data.allowedDirectorUids == resource.data.allowedDirectorUids
         && request.resource.data.category == resource.data.category
+        && validGoogleDocumentUrl(request.resource.data.documentUrl)
         && request.resource.data.status == 'submitted'
         && request.resource.data.revisionNumber == resource.data.revisionNumber + 1
         && request.resource.data.updatedBy == request.auth.uid
