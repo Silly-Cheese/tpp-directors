@@ -4,6 +4,7 @@ import { auth } from "./firebase.js";
 let observer = null;
 let lastMeetingId = null;
 let initialized = false;
+let observerFrame = null;
 
 const $ = (selector) => document.querySelector(selector);
 
@@ -40,7 +41,10 @@ function syncInviteCount() {
   const count = document.querySelectorAll('#meeting-invite-grid input[name="meetingInvitee"]:checked').length;
   const total = document.querySelectorAll('#meeting-invite-grid input[name="meetingInvitee"]').length;
   const label = $("#phase5-invite-count");
-  if (label) label.textContent = `${count} of ${total} selected`;
+  const next = `${count} of ${total} selected`;
+  // MutationObserver watches childList changes. Rewriting identical textContent
+  // creates another child mutation and previously caused an endless feedback loop.
+  if (label && label.textContent !== next) label.textContent = next;
 }
 
 function ensureMeetingPolish() {
@@ -119,22 +123,33 @@ function installInteractionEnhancements() {
   });
 }
 
+function runObserverPass() {
+  observerFrame = null;
+  ensureInviteTools();
+  syncInviteCount();
+  ensureMeetingPolish();
+}
+
+function queueObserverPass() {
+  if (observerFrame !== null) return;
+  observerFrame = requestAnimationFrame(runObserverPass);
+}
+
 function startObserver() {
   if (observer) observer.disconnect();
-  observer = new MutationObserver(() => {
-    ensureInviteTools();
-    syncInviteCount();
-    ensureMeetingPolish();
-  });
+  if (observerFrame !== null) cancelAnimationFrame(observerFrame);
+  observerFrame = null;
+  observer = new MutationObserver(queueObserverPass);
   observer.observe(document.body, { childList: true, subtree: true });
-  ensureInviteTools();
-  ensureMeetingPolish();
+  runObserverPass();
 }
 
 function teardown() {
   lastMeetingId = null;
   if (observer) observer.disconnect();
   observer = null;
+  if (observerFrame !== null) cancelAnimationFrame(observerFrame);
+  observerFrame = null;
 }
 
 function init() {
