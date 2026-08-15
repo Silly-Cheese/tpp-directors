@@ -87,7 +87,10 @@
       { id: "b", status: "pass", critical: false }
     ];
     const gate = evaluateLaunchGate(allPassChecks, completed);
-    test("fully completed launch gate becomes ready", gate.ready === true && gate.incompleteManual.length === 0);
+    test("fully completed launch gate becomes ready", gate.ready === true && gate.automaticAvailable === true && gate.incompleteManual.length === 0);
+
+    const noDiagnostics = evaluateLaunchGate([], completed);
+    test("completed checklist cannot bypass missing diagnostics", noDiagnostics.ready === false && noDiagnostics.automaticAvailable === false);
 
     const incomplete = normalizeManualState({});
     const blocked = evaluateLaunchGate(allPassChecks, incomplete);
