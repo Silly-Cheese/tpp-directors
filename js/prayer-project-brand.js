@@ -68,6 +68,7 @@ ensureStylesheet(
   "data-prayer-project-fonts"
 );
 ensureStylesheet("./prayer-project-brand.css", "data-prayer-project-brand");
+ensureStylesheet("./form-contrast.css", "data-prayer-project-form-contrast");
 ensureFavicon();
 
 if (document.readyState === "loading") {
