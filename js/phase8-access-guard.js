@@ -5,6 +5,7 @@ import { hasPermission, PERMISSIONS } from "./permissions.js";
 
 let profileUnsub = null;
 let initialized = false;
+let lastPermissionSignature = null;
 
 const TAB_PERMISSION = Object.freeze({
   committees: PERMISSIONS.COMMITTEES_VIEW,
@@ -14,12 +15,36 @@ const TAB_PERMISSION = Object.freeze({
   compliance: PERMISSIONS.COMPLIANCE_VIEW
 });
 
+const PHASE8_PERMISSIONS = Object.freeze([
+  PERMISSIONS.COMMITTEES_VIEW,
+  PERMISSIONS.COMMITTEES_MANAGE,
+  PERMISSIONS.COI_VIEW,
+  PERMISSIONS.COI_SUBMIT,
+  PERMISSIONS.COI_REVIEW,
+  PERMISSIONS.COI_MANAGE,
+  PERMISSIONS.OFFICERS_VIEW,
+  PERMISSIONS.OFFICERS_MANAGE,
+  PERMISSIONS.TASKS_VIEW,
+  PERMISSIONS.TASKS_CREATE,
+  PERMISSIONS.TASKS_UPDATE_OWN,
+  PERMISSIONS.TASKS_MANAGE,
+  PERMISSIONS.COMPLIANCE_VIEW,
+  PERMISSIONS.COMPLIANCE_MANAGE,
+  PERMISSIONS.DIRECTORS_VIEW
+]);
+
 function founder(profile) {
   return profile?.root === true && profile?.systemRole === "founder_director";
 }
 
 function allowed(profile, permission) {
   return founder(profile) || hasPermission(profile, permission);
+}
+
+function permissionSignature(profile) {
+  if (!profile) return "signed-out";
+  if (founder(profile)) return "founder-root";
+  return PHASE8_PERMISSIONS.map((permission) => `${permission}:${hasPermission(profile, permission) ? 1 : 0}`).join("|");
 }
 
 function applyAccess(profile) {
@@ -51,7 +76,14 @@ function bindProfile(uid) {
   profileUnsub?.();
   profileUnsub = onSnapshot(doc(db, "directors", uid), (snapshot) => {
     if (!snapshot.exists() || snapshot.data().accountStatus !== "active") return applyAccess(null);
-    applyAccess({ uid: snapshot.id, ...snapshot.data() });
+    const nextProfile = { uid: snapshot.id, ...snapshot.data() };
+    const nextSignature = permissionSignature(nextProfile);
+    if (lastPermissionSignature !== null && nextSignature !== lastPermissionSignature) {
+      window.location.reload();
+      return;
+    }
+    lastPermissionSignature = nextSignature;
+    applyAccess(nextProfile);
   }, () => applyAccess(null));
 }
 
@@ -61,8 +93,10 @@ function init() {
   onAuthStateChanged(auth, async (user) => {
     profileUnsub?.();
     profileUnsub = null;
+    lastPermissionSignature = null;
     if (!user) return applyAccess(null);
     const profile = await loadProfile(user.uid);
+    lastPermissionSignature = permissionSignature(profile);
     applyAccess(profile);
     if (profile?.accountStatus === "active") bindProfile(user.uid);
   });
