@@ -269,7 +269,7 @@ export async function checkIntoMeeting(meetingId, profile) {
 
   const meeting = meetingSnapshot.data();
   const attendance = attendanceSnapshot.data();
-  if (!["checkin_open", "in_session"].includes(meeting.status)) throw new Error("Check-in is not currently open for this meeting.");
+  if (!["checkin_open", "in_session", "recessed"].includes(meeting.status)) throw new Error("Check-in is not currently open for this meeting.");
   if (attendance.presenceStatus === "present") return;
   if (["excused", "absent"].includes(attendance.presenceStatus)) throw new Error("Your attendance status must be changed by an authorized meeting administrator before you can check in.");
 
@@ -292,10 +292,20 @@ export async function updateMeetingAttendance(meetingId, targetUid, presenceStat
   if (!VALID_PRESENCE.has(presenceStatus)) throw new Error("Choose a valid attendance status.");
 
   const attendanceRef = doc(db, "meetingAttendance", attendanceId(meetingId, targetUid));
-  const snapshot = await getDoc(attendanceRef);
-  if (!snapshot.exists()) throw new Error("Attendance record not found.");
-  const current = snapshot.data();
+  const [meetingSnapshot, attendanceSnapshot] = await Promise.all([
+    getDoc(doc(db, "meetings", meetingId)),
+    getDoc(attendanceRef)
+  ]);
+  if (!meetingSnapshot.exists()) throw new Error("Board meeting not found.");
+  if (!attendanceSnapshot.exists()) throw new Error("Attendance record not found.");
 
+  const meeting = meetingSnapshot.data();
+  if (["adjourned", "cancelled"].includes(meeting.status)) throw new Error("Attendance is locked after a meeting is adjourned or cancelled.");
+  if (["present", "departed", "absent"].includes(presenceStatus) && !["checkin_open", "in_session", "recessed"].includes(meeting.status)) {
+    throw new Error("Present, departed, or absent status may be recorded only after check-in opens.");
+  }
+
+  const current = attendanceSnapshot.data();
   const patch = {
     presenceStatus,
     lastPresenceChangeAt: serverTimestamp(),
