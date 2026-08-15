@@ -1,42 +1,38 @@
 # Production Deployment
 
-The application is designed for GitHub Pages at `https://directors.ask4prayers.com` with Firebase Authentication and Cloud Firestore from project `tpp-direc`.
+The portal targets `https://directors.ask4prayers.com`, is hosted with GitHub Pages, and uses only Firebase Authentication + Cloud Firestore from project `tpp-direc`.
 
 ## 1. GitHub Pages
 
 Repository: `Silly-Cheese/tpp-directors`
 
-Enable GitHub Pages using the `main` branch and repository root as the publishing source. The repository contains:
+Enable Pages from the `main` branch and repository root.
+
+The repository contains:
 
 - `index.html`
-- `CNAME` containing `directors.ask4prayers.com`
-- `.nojekyll` so the repository is served as a plain static site
+- `CNAME` with `directors.ask4prayers.com`
+- `.nojekyll`
 
-GitHub Pages is an external repository setting and is not enabled merely by committing these files.
+GitHub Pages is an external repository setting; committing these files alone does not enable it.
 
 ## 2. DNS
 
-Create the DNS record for `directors.ask4prayers.com` required by the GitHub Pages configuration for `Silly-Cheese.github.io`.
-
-Do not remove the repository `CNAME` file after the custom domain is configured.
+Configure `directors.ask4prayers.com` for the GitHub Pages site and keep the repository `CNAME` file.
 
 ## 3. Firebase Authentication
 
-In Firebase Console for project `tpp-direc`:
+In Firebase project `tpp-direc`:
 
 1. Enable **Email/Password** Authentication.
-2. Add `directors.ask4prayers.com` to Authentication authorized domains if it is not already present.
-3. Do not enable Firebase Hosting, Storage, Functions, or unrelated Firebase products for this portal.
+2. Add `directors.ask4prayers.com` to authorized domains if needed.
+3. Do not enable Firebase Hosting, Storage, Functions, or other Firebase products for this portal.
 
-Directors never enter an email address. Email/Password is only the Firebase backing provider; the portal creates random non-deliverable Auth aliases and presents the requested Full Name + PIN experience.
-
-See `docs/PHASE-2-AUTHENTICATION.md` for the credential architecture.
+Directors do not enter an email address. The email/password provider is only the internal Firebase backing credential for the Full Name + four-digit PIN experience.
 
 ## 4. Cloud Firestore
 
-Create/confirm the Cloud Firestore database for `tpp-direc` and deploy the repository Security Rules.
-
-From a Firebase CLI environment authenticated to the correct Google/Firebase account:
+Create/confirm Cloud Firestore and deploy the repository Security Rules:
 
 ```bash
 firebase use tpp-direc
@@ -45,74 +41,137 @@ firebase deploy --only firestore:rules
 
 ### No manual/composite indexes
 
-The project intentionally does not contain `firestore.indexes.json`, and `firebase.json` references only `firestore.rules`.
+There is intentionally no `firestore.indexes.json`.
 
-Do not create manual/composite indexes for portal queries. Director, account, and notice lists are read without composite queries and are searched, filtered, and sorted in the browser. Future phases must preserve this architecture unless the project requirements are explicitly changed.
+`firebase.json` references only `firestore.rules`.
 
-## 5. Founder Director bootstrap
+Do not create manual/composite indexes for the portal. Phase 1-4 query design uses direct reads, role-authorized full collection reads, or separate single-field equality / `array-contains` queries with browser-side merge/filter/sort.
 
-The root Founder Director identity must exist before Founder Control can create ordinary accounts.
+## 5. Founder bootstrap
 
-Follow `docs/FOUNDER-BOOTSTRAP.md` exactly. The bootstrap is a one-time Firebase Console operation because putting a root-claim secret in a public GitHub Pages client would be insecure.
+Follow `docs/FOUNDER-BOOTSTRAP.md` before using Founder Control.
 
-The Phase 3 bootstrap model includes a Board-facing `boardDirectory/{FOUNDER_AUTH_UID}` record in addition to the protected `directors/{FOUNDER_AUTH_UID}` record. If that Board-directory mirror is omitted during initial bootstrap, Founder Control can backfill the missing directory record after the Founder account is activated.
+The root Founder identity must exist before ordinary accounts can be provisioned.
+
+After Founder activation, Founder Control can backfill a missing `boardDirectory/{FOUNDER_UID}` mirror if the initial console bootstrap omitted it.
 
 ## 6. Phase 2 account verification
 
-After Pages, DNS, Firebase Authentication, Security Rules, and Founder bootstrap are configured, verify:
+Verify:
 
-- the initial sign-in screen asks for full name only;
-- the Founder name resolves to the first-use activation screen;
-- the activation code allows PIN creation;
-- subsequent sign-in uses Full Name + four-digit PIN;
-- Founder Control is visible only to the protected root profile;
-- the Founder can create an ordinary director account without replacing the Founder browser session;
-- the one-time activation code is displayed after account creation and is not stored in Firestore;
-- a new director can activate and choose a PIN;
-- a signed-in director can change their own PIN;
-- an interrupted activation can use the `I already created my PIN` recovery route;
-- a non-active account is removed from portal access by the live profile listener;
-- `Prepare PIN Recovery` marks an ordinary account for recovery and displays the administrative recovery package;
-- unauthenticated users cannot list `loginDirectory` or `directors`;
-- ordinary users cannot create, promote, delete, or demote root identities.
+- Full Name is the visible first login identifier;
+- activation-code first use works;
+- four-digit PIN setup works;
+- subsequent Full Name + PIN sign-in works;
+- Founder provisioning does not replace the Founder browser session;
+- ordinary director creation produces `DIR-######` and a one-time activation code;
+- the activation code is not stored in Firestore;
+- self-service PIN change works;
+- interrupted activation recovery works;
+- suspended/inactive users lose portal access through the live profile listener;
+- PIN recovery preparation produces the documented Firebase-admin recovery package;
+- ordinary users cannot create/promote/demote the Founder root identity.
 
-For a forgotten-PIN recovery, the Founder must perform the privileged Firebase Authentication password change through an authorized Firebase administrative workflow before giving the generated activation code to the director. The static portal does not pretend to have Admin SDK privileges.
+## 7. Phase 3 workspace verification
 
-## 7. Phase 3 Board workspace verification
+Verify:
 
-Verify the Board workspace after at least the Founder and one ordinary director exist:
+- dashboard Board metrics render;
+- Board profile/term/voting data render;
+- Board directory search and status filters work;
+- ordinary directory listing returns only `directoryVisible == true` records;
+- a hidden directory record cannot be read by an ordinary director through a direct Firestore request;
+- Founder root can administer hidden directory records;
+- only published Board notices are readable by ordinary directors;
+- archived notices disappear from ordinary notice reads, not merely the UI;
+- notice publishing/archive works for authorized managers;
+- Phase 3 workflows do not request a composite index.
 
-- the overview dashboard displays Board counts and the signed-in director's profile information;
-- `boardDirectory` is readable by directors with `directors.view` without exposing login aliases, login keys, root fields, or permission arrays;
-- the Board directory can search by name, role, officer role, or director number;
-- directory status filters work for current, confirmed, interim, leave-of-absence, and former records;
-- detailed director profiles show only Board-facing governance information;
-- Founder changes to Board role, officer role, Board status, voting status, term dates, and directory visibility update the Board-facing directory;
-- older Phase 2 account records missing a Board-directory mirror are backfilled through Founder Control;
-- Founder Board-account metrics update correctly;
-- the Founder can publish a Board notice;
-- active directors can see published notices on their dashboard;
-- notice priority/expiration filtering is performed client-side;
-- the Founder can archive a notice;
-- no Phase 2 or Phase 3 workflow requests a manual/composite Firestore index.
+## 8. Phase 4 document verification
 
-## 8. Browser QA harness
+Create at least one Standard Director and one account with `documents.review`, then verify the following.
 
-After serving the repository over HTTP, open:
+### Google-link-only submission
+
+- the portal contains no file input;
+- Google Docs links are accepted;
+- Google Sheets links are identified correctly;
+- Google Slides links are identified correctly;
+- Google Drive links are accepted;
+- non-Google URLs are rejected;
+- HTTP/non-HTTPS Google links are rejected;
+- the underlying Google file still requires appropriate Drive sharing permissions.
+
+### Document access scopes
+
+Verify with separate accounts:
+
+- **Board** records are readable by directors with `documents.view`;
+- **Board Officers** records are not readable by non-officers;
+- **Board Officers** records are readable by an officer with `documents.view`;
+- **Selected Directors** records are readable only by selected UIDs, the submitter, reviewers, and Founder root;
+- **Founder Director Only** records are not returned to ordinary directors;
+- the submitting director can still see their own restricted/Founder-only submission;
+- reviewers can read the full document review set.
+
+### Board Inbox and lifecycle
+
+Verify:
+
+- newly submitted documents appear in the Board Inbox for reviewers;
+- Begin Review changes `submitted -> under_review`;
+- Return for Revision requires a note;
+- the submitter can revise a returned record and resubmit it;
+- revision number increments;
+- Agenda Ready status works;
+- permitted approve/reject/table transitions work;
+- invalid status jumps are rejected by the client and Firestore rules;
+- archived records cannot be reopened directly;
+- every lifecycle operation creates an append-only `documentEvents` entry;
+- the record detail page opens the Google link in a new tab;
+- search/category/status filters work client-side.
+
+### No-index verification
+
+Phase 4 must not prompt for a manual/composite index.
+
+The ordinary-document read strategy intentionally uses separate queries such as:
+
+```text
+submittedBy == currentUid
+accessScope == board
+accessScope == officers
+allowedDirectorUids array-contains currentUid
+```
+
+Those result sets are merged/deduplicated in JavaScript.
+
+Document history uses:
+
+```text
+documentId == selectedDocumentId
+```
+
+No combined query/orderBy is used.
+
+## 9. Browser QA harnesses
+
+Serve the repo locally over HTTP and open:
 
 ```text
 /tests/phase2-phase3.html
+/tests/phase4-documents.html
 ```
 
-The harness performs non-destructive browser tests for name normalization, login-key determinism, activation formatting, PIN validation, account-specific PIN backing values, director-number formatting, permission templates, and Board-directory summary calculations. It does not write to Firebase.
+The Phase 4 harness validates Google-link handling, category/access normalization, human-readable statuses, and review-transition rules without writing to Firebase.
 
-## 9. Products intentionally not used
+## 10. Products intentionally not used
 
 - Firebase Hosting
 - Firebase Storage
 - Cloud Functions for Firebase
 - Firebase Admin SDK in the production runtime
-- file uploads
+- direct file uploads
 - manual/composite Firestore indexes
 
-Board documents in Phase 4 and later must continue to use Google Docs/Drive/Sheets/Slides links instead of uploads.
+Board documents remain Google-hosted links throughout later phases unless the project requirements are explicitly changed.
