@@ -3,46 +3,66 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="theme-color" content="#0b1730">
-  <title>Founder First-Run Setup | The Prayer Project</title>
+  <meta name="theme-color" content="#000000">
+  <title>Founder Setup | The Prayer Project</title>
+  <meta name="description" content="Protected first-run setup for The Prayer Project Board of Directors Portal.">
+  <link rel="icon" type="image/svg+xml" href="./favicon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Playfair+Display:wght@600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="./styles.css">
   <link rel="stylesheet" href="./production-hardening.css">
-  <style>
-    .first-run-shell{min-height:calc(100vh - 84px);display:grid;place-items:center;padding:42px 18px;background:radial-gradient(circle at 12% 15%,rgba(61,120,216,.11),transparent 28%),linear-gradient(135deg,#f9fbff,#eef4fb)}
-    .first-run-card{width:min(100%,620px);padding:34px;background:#fff;border:1px solid #dfe5ee;border-radius:24px;box-shadow:0 20px 50px rgba(7,18,37,.12)}
-    .first-run-card h1{margin:4px 0 8px;color:#071225;font-size:34px;letter-spacing:-.035em}.first-run-card>p{color:#667085;line-height:1.65}
-    .first-run-form{display:grid;gap:10px;margin-top:24px}.first-run-form label{margin-top:6px;font-size:12px;color:#344054;font-weight:700}.first-run-form input{width:100%;min-height:48px;padding:11px 14px;border:1px solid #cfd8e6;border-radius:11px;outline:none}.first-run-form input:focus{border-color:#8badde;box-shadow:0 0 0 4px rgba(61,120,216,.1)}
-    .first-run-form button{min-height:50px;margin-top:12px;border:0;border-radius:11px;background:#0b1730;color:#fff;font-weight:800}.first-run-form button:disabled{opacity:.65}.first-run-note{margin-top:22px;padding:15px;border:1px solid #d9e3f2;border-radius:13px;background:#f7f9fd;color:#59657a;font-size:12px;line-height:1.55}.first-run-message{min-height:22px;margin:8px 0 0;color:#7b4e08;font-size:13px;line-height:1.5}.first-run-success{color:#18875f}.first-run-actions{margin-top:18px;text-align:center}.first-run-actions a{color:#2f67bd;font-size:13px;font-weight:700}
-  </style>
+  <link rel="stylesheet" href="./prayer-project-brand.css">
 </head>
 <body>
   <div class="page-shell">
     <header class="site-header">
-      <a class="brand" href="./"><span class="brand-mark">TPP</span><span><strong>The Prayer Project</strong><small>Board of Directors Portal</small></span></a>
+      <a class="brand" href="https://ask4prayers.com/" aria-label="The Prayer Project home">
+        <span class="brand-mark" aria-hidden="true">✦</span>
+        <span><strong>The Prayer Project</strong><small>Board of Directors</small></span>
+      </a>
       <span class="environment-badge">Founder Setup</span>
     </header>
+
     <main class="first-run-shell">
+      <section class="first-run-intro" aria-labelledby="founder-welcome-title">
+        <div class="eyebrow">Board Governance</div>
+        <h1 id="founder-welcome-title">Welcome to your Board Portal.</h1>
+        <p>This private workspace carries the same Prayer Project identity as the public ministry while giving the Board a secure place for meetings, documents, voting, governance records, and administration.</p>
+        <div class="verse-note">
+          <strong>One protected first run.</strong>
+          You will use the temporary Firebase account once, choose your four-digit portal PIN, and the system will create the protected Founder Director account automatically.
+        </div>
+      </section>
+
       <section class="first-run-card" aria-labelledby="setup-title">
-        <p class="eyebrow">ONE-TIME FOUNDER SETUP</p>
-        <h1 id="setup-title">Set up your Founder account.</h1>
-        <p>This one screen creates the protected Founder Director records automatically. Use the temporary Firebase email and password for the Auth user you already created, then choose the four-digit PIN you want to use from now on.</p>
+        <div class="eyebrow">One-Time Founder Setup</div>
+        <h2 id="setup-title">Initialize your account.</h2>
+        <p>Enter the temporary Firebase credentials for the protected Auth user, then choose the four-digit PIN you want to use from now on.</p>
+
         <form id="founder-setup-form" class="first-run-form" novalidate>
           <label for="setup-email">Temporary Firebase email</label>
-          <input id="setup-email" name="email" type="email" autocomplete="username" required placeholder="The email/alias used in Firebase Authentication">
+          <input id="setup-email" name="email" type="email" autocomplete="username" required placeholder="Firebase Authentication email or alias">
+
           <label for="setup-password">Temporary Firebase password</label>
-          <input id="setup-password" name="password" type="password" autocomplete="current-password" required placeholder="Your temporary Firebase password">
+          <input id="setup-password" name="password" type="password" autocomplete="current-password" required placeholder="Temporary Firebase password">
+
           <label for="setup-pin">Choose your 4-digit portal PIN</label>
           <input id="setup-pin" name="pin" type="password" inputmode="numeric" autocomplete="new-password" pattern="[0-9]{4}" maxlength="4" required placeholder="••••">
+
           <label for="setup-pin-confirm">Confirm your PIN</label>
           <input id="setup-pin-confirm" name="pinConfirm" type="password" inputmode="numeric" autocomplete="new-password" pattern="[0-9]{4}" maxlength="4" required placeholder="••••">
+
           <button id="founder-setup-button" type="submit">Initialize My Founder Portal</button>
-          <p id="founder-setup-message" class="first-run-message" role="status"></p>
+          <p id="founder-setup-message" class="first-run-message" role="status" aria-live="polite"></p>
         </form>
-        <div class="first-run-note"><strong>Protected first run.</strong> The setup can succeed only while authenticated as the Firebase user whose UID is hard-bound to the portal's Founder bootstrap rule. The temporary password and your PIN are never written to Firestore.</div>
+
+        <div class="first-run-note"><strong>Protected first run.</strong> Setup can succeed only while authenticated as the Firebase user whose UID is hard-bound to the Founder bootstrap rule. Neither the temporary password nor your PIN is stored in Firestore.</div>
         <div class="first-run-actions"><a href="./">Return to Director Sign In</a></div>
       </section>
     </main>
   </div>
+
   <script type="module" src="./js/founder-first-run.js"></script>
 </body>
 </html>
