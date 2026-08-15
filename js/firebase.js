@@ -29,6 +29,7 @@ setPersistence(provisioningAuth, inMemoryPersistence).catch((error) => {
 if (typeof window !== "undefined") {
   window.__TPP_MODULE_STATUS__ ||= {};
   const modules = [
+    "./founder-first-run-redirect.js",
     "./runtime-hardening.js",
     "./portal-navigation-sync.js",
     "./phase5.js",
