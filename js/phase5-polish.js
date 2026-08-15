@@ -73,7 +73,10 @@ function ensureMeetingPolish() {
     createdWorkspace = true;
   }
 
-  dispatchMeetingSelection(createdWorkspace || meetingId !== lastMeetingId);
+  const workspace = $("#phase6-meeting-workspace");
+  const phase6ReadyNeedsHandoff = Boolean($("#view-resolutions") && workspace && workspace.dataset.phase6Bound !== "true");
+  if (phase6ReadyNeedsHandoff) workspace.dataset.phase6Bound = "true";
+  dispatchMeetingSelection(createdWorkspace || meetingId !== lastMeetingId || phase6ReadyNeedsHandoff);
 }
 
 function installConfirmationGuard() {
