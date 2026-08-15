@@ -1,6 +1,6 @@
 # Phase 4 — Board Document Center & Board Inbox
 
-Phase 4 makes Google-linked Board documents operational inside The Prayer Project Board of Directors Portal.
+Phase 4 is complete. It makes Google-linked Board documents operational inside The Prayer Project Board of Directors Portal while preserving the project's no-upload and no-manual-index requirements.
 
 ## Core document policy
 
@@ -12,17 +12,15 @@ Every Board document is represented by:
 - Firestore metadata describing the governance record;
 - access-control metadata;
 - status/review metadata;
-- immutable history events.
+- an append-only, mutation-bound history trail.
 
 Firebase Storage is not used.
 
-The portal validates the URL host before accepting a submission. Google Drive sharing permissions still matter independently: portal access to a link does not grant access to the underlying Google file.
+The portal validates the Google URL in the browser and Firestore Security Rules. Google Drive sharing permissions remain independent: portal permission to see a link does not grant permission to open the underlying Google file.
 
 ## Firestore collections
 
 ### `documents/{documentId}`
-
-Primary Board document record.
 
 Representative fields:
 
@@ -47,6 +45,7 @@ reviewedAt
 reviewNote
 agendaMeetingId
 archivedAt
+lastEventId
 createdAt
 updatedAt
 updatedBy
@@ -56,9 +55,36 @@ Document numbers use `BDOC-YYYY-XXXXXX`, with the suffix derived from the Firest
 
 ### `documentEvents/{eventId}`
 
-Append-only lifecycle events such as submitted, revised, resubmitted, under review, returned for revision, agenda ready, approved, rejected, tabled, and archived.
+Append-only lifecycle events include:
 
-Events are read with a single-field `documentId == ...` query and sorted client-side.
+- submitted;
+- revised;
+- resubmitted;
+- under review;
+- returned for revision;
+- agenda ready;
+- approved;
+- rejected;
+- tabled;
+- archived.
+
+History is read with a single-field `documentId == ...` query and sorted client-side.
+
+## Mutation-bound event integrity
+
+The final Phase 4 review hardened document history beyond simple append-only rules.
+
+Every document mutation reserves a new random `lastEventId` in the document record. Security Rules require:
+
+1. the new `lastEventId` to be a string;
+2. the ID not to already exist in `documentEvents`;
+3. the event being created to use exactly that document ID;
+4. the event type to match the actual document transition/revision;
+5. the event actor to match the authenticated user performing the mutation;
+6. revision events to match the actual revision increment and prior status;
+7. review events to match the actual new status and reviewer UID.
+
+This prevents an authorized user from appending arbitrary duplicate-looking history events to a document they can access.
 
 ## Categories
 
@@ -88,19 +114,11 @@ Accessible to the selected Firebase Authentication UIDs, the submitter, document
 
 ### Founder Director Only
 
-This scope is literal: it is accessible only to the Founder root account and the submitting director.
-
-A non-Founder user with `documents.review` does **not** receive Founder-only records in the Board Inbox and cannot review them. Founder root can process those records.
-
-The submitter retains access so they can follow status and complete requested revisions.
+Accessible only to the Founder root account and the submitting director. A non-Founder reviewer does not receive Founder-only records in the Board Inbox.
 
 ## Review permission
 
-`documents.review` is the Phase 4 review capability.
-
-Founder root implicitly has every capability. The initial Board Secretary and Board Chair templates also include document review.
-
-Non-Founder reviewers receive all non-Founder-only submissions, including Board, Officers, and Selected-Director records. That elevated review access is intentional and enforced by Security Rules.
+`documents.review` controls the Board Inbox/review workflow. Founder root implicitly has every capability. The initial Secretary and Chair templates include document review, but the Founder can change permissions individually.
 
 ## Document lifecycle
 
@@ -113,68 +131,56 @@ SUBMITTED
   -> ARCHIVED
 ```
 
-Some direct transitions are supported, such as moving a submitted item directly to Agenda Ready or rejecting a clearly unsuitable submission.
-
-Security Rules enforce valid transitions. Archived/rejected records cannot be silently reopened into arbitrary earlier states.
+Security Rules enforce allowed transitions. Archived/rejected records cannot be silently reopened into arbitrary earlier states.
 
 ## Revision model
 
-The Google file remains in Drive. A portal revision updates the link/metadata and increments `revisionNumber`.
+The Google file remains in Drive. A portal revision updates the stored link/metadata and increments `revisionNumber`.
 
 A submitter may revise only while the record is:
 
-- `submitted`, or
+- `submitted`; or
 - `returned_for_revision`.
 
-Reviewers cannot use the review path to rewrite the submitted title, Google link, access scope, category, or submitting identity.
+Reviewers cannot use the review path to rewrite title, Google link, access scope, category, or submitting identity.
 
 ## Board Inbox
 
 The Board Inbox is derived from reviewer-visible documents in:
 
-- `submitted`
-- `under_review`
+- `submitted`;
+- `under_review`.
 
 It is not a duplicate Firestore collection.
 
-Founder-only submissions are excluded from a non-Founder reviewer's data set.
-
 ## Agenda handoff
 
-`agenda_ready` is the Phase 4 handoff state to the future meeting system.
-
-`agendaMeetingId` is reserved for Phase 5/6. Phase 4 does not invent a meeting ID before the meeting module exists.
+`agenda_ready` remains the document handoff state for the agenda/voting layer. Phase 5 now supplies real meeting IDs and live meeting state; Phase 6 will attach agenda-ready documents to agenda items and pushed Board actions.
 
 ## No manual/composite indexes
 
-Phase 4 preserves the project-wide no-manual-index rule.
-
-Ordinary document access uses separate single-field queries such as:
+Phase 4 uses separate single-field reads such as:
 
 ```text
 submittedBy == currentUid
 accessScope == board
 accessScope == officers
 allowedDirectorUids array-contains currentUid
+documentId == selectedDocumentId
 ```
 
-A non-Founder reviewer uses separate single-field queries for `board`, `officers`, and `restricted` scopes plus their own submissions. Founder root may read the full collection.
-
-Result sets are merged, deduplicated, filtered, searched, and sorted in the browser.
-
-Document history uses one equality query on `documentId`.
+Results are merged, deduplicated, filtered, searched, and sorted in the browser.
 
 There is intentionally no `firestore.indexes.json`.
 
-## Phase 3 completion included with Phase 4
+## Completion status
 
-Phase 3 was hardened before Phase 4 opened:
+Phase 4 is considered **COMPLETE** after the Phase 5 review because:
 
-1. Ordinary `boardDirectory` reads now require `directoryVisible == true`, with a matching single-field query.
-2. Ordinary directors can read only `published` Board notices; archived records are no longer merely hidden by the UI.
-
-## Phase 5 handoff
-
-Phase 5 can consume `agenda_ready` records by attaching them to scheduled/active meetings, writing a meeting association through Phase 5-authorized rules, and displaying the linked Google document inside the live agenda.
-
-No Phase 5 collection is opened by Phase 4.
+- Google-link validation exists in client and Security Rules;
+- restricted access is enforced server-side;
+- review transitions are enforced server-side;
+- Founder-only records are actually Founder-restricted;
+- history events are append-only and bound to real document mutations;
+- no upload path exists;
+- no manual/composite index is required.
