@@ -30,6 +30,7 @@ if (typeof window !== "undefined") {
     .then(() => import("./phase5.js"))
     .then(() => import("./phase5-polish.js"))
     .then(() => import("./phase6.js"))
+    .then(() => import("./phase6-closing-recovery.js"))
     .then(() => import("./phase6-guard.js"))
     .then(() => import("./phase6-alert.js"))
     .then(() => import("./phase6-recorded-audit.js"))
