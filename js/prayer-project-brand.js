@@ -52,6 +52,15 @@ function syncBrandCopy() {
   if (badge && !/Founder Setup/i.test(badge.textContent)) setTextIfNeeded(badge, "Board Governance");
 }
 
+let syncFrame = null;
+function queueBrandSync() {
+  if (syncFrame !== null) return;
+  syncFrame = requestAnimationFrame(() => {
+    syncFrame = null;
+    syncBrandCopy();
+  });
+}
+
 ensurePreconnect("https://fonts.googleapis.com");
 ensurePreconnect("https://fonts.gstatic.com");
 ensureStylesheet(
@@ -62,10 +71,14 @@ ensureStylesheet("./prayer-project-brand.css", "data-prayer-project-brand");
 ensureFavicon();
 
 if (document.readyState === "loading") {
-  document.addEventListener("DOMContentLoaded", syncBrandCopy, { once: true });
+  document.addEventListener("DOMContentLoaded", queueBrandSync, { once: true });
 } else {
-  syncBrandCopy();
+  queueBrandSync();
 }
 
-const observer = new MutationObserver(() => syncBrandCopy());
-observer.observe(document.documentElement, { childList: true, subtree: true });
+// Portal modules announce completion through this event. Re-syncing at those
+// bounded points is enough to brand dynamically injected navigation without
+// keeping a permanent whole-document MutationObserver alive.
+window.addEventListener("tpp:module-status", (event) => {
+  if (event.detail?.status === "loaded") queueBrandSync();
+});
