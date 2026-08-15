@@ -107,8 +107,8 @@ export async function submitBoardDocument(input, profile) {
     requestedAction: requestedAction || null, status: "submitted", revisionNumber: 1,
     submittedBy: auth.currentUser.uid, submittedByName: profile.displayName || profile.fullName || "Director",
     submittedAt: serverTimestamp(), reviewedBy: null, reviewedByName: null, reviewedAt: null,
-    reviewNote: null, agendaMeetingId: null, archivedAt: null, updatedBy: auth.currentUser.uid,
-    createdAt: serverTimestamp(), updatedAt: serverTimestamp()
+    reviewNote: null, agendaMeetingId: null, archivedAt: null, lastEventId: eventRef.id,
+    updatedBy: auth.currentUser.uid, createdAt: serverTimestamp(), updatedAt: serverTimestamp()
   };
   const batch = writeBatch(db);
   batch.set(documentRef, record);
@@ -172,7 +172,7 @@ export async function reviseBoardDocument(documentId, input, profile) {
     requestedAction: String(input.requestedAction ?? record.requestedAction ?? "").trim() || null,
     status: "submitted", revisionNumber: Number(record.revisionNumber || 1) + 1,
     reviewNote: null, reviewedBy: null, reviewedByName: null, reviewedAt: null,
-    updatedAt: serverTimestamp(), updatedBy: auth.currentUser.uid
+    lastEventId: eventRef.id, updatedAt: serverTimestamp(), updatedBy: auth.currentUser.uid
   });
   batch.set(eventRef, { documentId, documentNumber: record.documentNumber, type: record.status === "returned_for_revision" ? "resubmitted" : "revised", actorUid: auth.currentUser.uid, actorName: profile.displayName || profile.fullName || "Director", note: null, createdAt: serverTimestamp() });
   await batch.commit();
@@ -196,7 +196,7 @@ export async function reviewBoardDocument(documentId, action, note, profile) {
   batch.update(doc(db, "documents", documentId), {
     status: nextStatus, reviewNote, reviewedBy: auth.currentUser.uid, reviewedByName: reviewerName,
     reviewedAt: serverTimestamp(), archivedAt: nextStatus === "archived" ? serverTimestamp() : record.archivedAt || null,
-    updatedAt: serverTimestamp(), updatedBy: auth.currentUser.uid
+    lastEventId: eventRef.id, updatedAt: serverTimestamp(), updatedBy: auth.currentUser.uid
   });
   batch.set(eventRef, { documentId, documentNumber: record.documentNumber || null, type: nextStatus, actorUid: auth.currentUser.uid, actorName: reviewerName, note: reviewNote, createdAt: serverTimestamp() });
   await batch.commit();
