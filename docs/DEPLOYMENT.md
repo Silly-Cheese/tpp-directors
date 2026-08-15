@@ -24,37 +24,66 @@ Do not remove the repository `CNAME` file after the custom domain is configured.
 
 In Firebase Console for project `tpp-direc`:
 
-1. Enable the Authentication provider selected in Phase 2.
-2. Add the production domain `directors.ask4prayers.com` to the authorized domains if it is not already present.
-3. Do not enable unrelated Firebase products for this portal.
+1. Enable **Email/Password** Authentication.
+2. Add `directors.ask4prayers.com` to Authentication authorized domains if it is not already present.
+3. Do not enable Firebase Hosting, Storage, Functions, or unrelated Firebase products for this portal.
 
-The final Authentication provider/credential design is intentionally deferred to Phase 2 because the requested Full Name + 4-digit PIN experience must be implemented without exposing a bootstrap secret or storing raw PINs.
+Directors never enter an email address. Email/Password is only the Firebase backing provider; the portal creates random non-deliverable Auth aliases and presents the requested Full Name + PIN experience.
+
+See `docs/PHASE-2-AUTHENTICATION.md` for the credential architecture.
 
 ## 4. Cloud Firestore
 
-Create/confirm the Cloud Firestore database for `tpp-direc` and deploy the repository rules/index configuration.
+Create/confirm the Cloud Firestore database for `tpp-direc` and deploy the repository Security Rules.
 
 From a Firebase CLI environment authenticated to the correct Google/Firebase account:
 
 ```bash
 firebase use tpp-direc
-firebase deploy --only firestore
+firebase deploy --only firestore:rules
 ```
 
-The repository's `firebase.json` contains only Firestore configuration. It does not configure Firebase Hosting, Storage, or Functions.
+### No composite/manual indexes
 
-## 5. Phase 1 verification
+The project intentionally does not contain `firestore.indexes.json`, and `firebase.json` references only `firestore.rules`.
 
-After Pages and DNS are active, verify:
+Do not create manual/composite indexes for portal queries. Account lists are sorted client-side, and future query design must preserve the no-manual-index requirement unless the project requirements are explicitly changed.
 
-- `https://directors.ask4prayers.com` loads the Board Portal shell;
-- browser developer tools show no missing module/CORS errors for the Firebase CDN imports;
-- the site loads without Firebase Hosting;
-- there is no file-upload control;
-- the login form clearly indicates that PIN activation is a Phase 2 feature;
-- unauthenticated users cannot read or write Firestore governance data;
-- unfinished governance collections remain deny-by-default.
+## 5. Founder Director bootstrap
 
-## 6. Phase 2 boundary
+The root Founder Director identity must exist before the Founder Control Center can create ordinary accounts.
 
-Do not manually create ordinary director accounts or expose a temporary production login before Phase 2 is implemented. Phase 2 will establish the Founder Director Authentication identity first and then make all ordinary account creation Founder-controlled.
+Follow `docs/FOUNDER-BOOTSTRAP.md` exactly. The bootstrap is a one-time Firebase Console operation because putting a root-claim secret in a public GitHub Pages client would be insecure.
+
+After the root Auth user, director profile, login-directory record, and counter are created, the Founder can activate the account through the normal portal and choose the first four-digit PIN.
+
+## 6. Phase 2 verification
+
+After Pages, DNS, Firebase Authentication, the Firestore rules, and Founder bootstrap are configured, verify:
+
+- `https://directors.ask4prayers.com` loads without Firebase Hosting;
+- the initial sign-in screen asks for full name only;
+- the Founder name resolves to the first-use activation screen;
+- the activation code signs the Founder in and allows PIN creation;
+- a subsequent sign-in uses Full Name + four-digit PIN;
+- Founder Control is visible only to the protected root profile;
+- the Founder can create an ordinary director account;
+- creating an ordinary account does not replace the Founder browser session;
+- the one-time activation code is displayed after creation and is not stored in Firestore;
+- an ordinary new director can activate and choose a PIN;
+- unauthenticated users cannot list `loginDirectory` or `directors`;
+- ordinary directors cannot list all director account records during Phase 2;
+- ordinary users cannot create, promote, delete, or demote root identities;
+- unfinished governance collections remain deny-by-default;
+- no manual/composite Firestore index is requested by Phase 2 workflows.
+
+## 7. Products intentionally not used
+
+- Firebase Hosting
+- Firebase Storage
+- Cloud Functions for Firebase
+- Firebase Admin SDK in production runtime
+- file uploads
+- manual/composite Firestore indexes
+
+Board documents in later phases must continue to use Google Docs/Drive/Sheets/Slides links instead of uploads.
