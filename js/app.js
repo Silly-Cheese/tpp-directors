@@ -7,6 +7,7 @@ import {
 import {
   doc,
   getDoc,
+  onSnapshot,
   serverTimestamp,
   writeBatch
 } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js";
@@ -19,9 +20,14 @@ import {
 } from "./identity.js";
 import {
   createDirectorAccount,
-  listDirectorAccounts
+  listDirectorAccounts,
+  updateDirectorAccess
 } from "./founder-admin.js";
-import { PERMISSION_TEMPLATES } from "./permissions.js";
+import {
+  PERMISSIONS,
+  PERMISSION_TEMPLATES,
+  permissionsForTemplate
+} from "./permissions.js";
 
 const signedOutView = document.querySelector("#signed-out-view");
 const signedInView = document.querySelector("#signed-in-view");
@@ -67,6 +73,21 @@ const copyActivationButton = document.querySelector("#copy-activation-button");
 const refreshDirectorsButton = document.querySelector("#refresh-directors-button");
 const directorCount = document.querySelector("#director-count");
 const directorTableBody = document.querySelector("#director-table-body");
+const manageDirectorPanel = document.querySelector("#manage-director-panel");
+const manageDirectorForm = document.querySelector("#manage-director-form");
+const manageDirectorName = document.querySelector("#manage-director-name");
+const manageDirectorNumber = document.querySelector("#manage-director-number");
+const manageDirectorUid = document.querySelector("#manage-director-uid");
+const manageBoardRole = document.querySelector("#manage-board-role");
+const manageOfficerRole = document.querySelector("#manage-officer-role");
+const manageAccountStatus = document.querySelector("#manage-account-status");
+const manageVotingStatus = document.querySelector("#manage-voting-status");
+const managePermissionTemplate = document.querySelector("#manage-permission-template");
+const applyPermissionTemplateButton = document.querySelector("#apply-permission-template");
+const permissionCheckboxes = document.querySelector("#permission-checkboxes");
+const manageDirectorMessage = document.querySelector("#manage-director-message");
+const closeManageDirectorButton = document.querySelector("#close-manage-director");
+const cancelManageDirectorButton = document.querySelector("#cancel-manage-director");
 
 const moduleCopy = Object.freeze({
   meetings: ["Meetings", "Live meeting activation, director check-in, attendance, and quorum are intentionally held for Phase 5."],
@@ -79,6 +100,8 @@ let loginStep = "name";
 let pendingLogin = null;
 let currentProfile = null;
 let currentLoginRecord = null;
+let founderAccounts = [];
+let profileUnsubscribe = null;
 
 function isFounder(profile) {
   return profile?.root === true && profile?.systemRole === "founder_director";
@@ -94,6 +117,12 @@ function setBusy(button, busy, label) {
     button.textContent = button.dataset.originalLabel;
     delete button.dataset.originalLabel;
   }
+}
+
+function syncLoginButtonLabel() {
+  if (loginStep === "activation") continueButton.textContent = "Verify activation code";
+  else if (loginStep === "pin") continueButton.textContent = "Sign in";
+  else continueButton.textContent = "Continue";
 }
 
 function authErrorMessage(error) {
@@ -119,7 +148,7 @@ function resetLoginFlow({ keepName = false } = {}) {
   activationField.hidden = true;
   pinField.hidden = true;
   loginBackButton.hidden = true;
-  continueButton.textContent = "Continue";
+  syncLoginButtonLabel();
   loginInstructions.textContent = "Enter your full name to continue.";
   loginMessage.textContent = "";
   activationCodeInput.value = "";
@@ -143,29 +172,52 @@ function showPinSetup(profile, loginRecord) {
   currentLoginRecord = loginRecord;
 }
 
-function showSignedIn(profile) {
+function applyProfileToUI(profile) {
   currentProfile = profile;
-  signedOutView.hidden = true;
-  signedInView.hidden = false;
-  loginForm.hidden = false;
-  pinSetupForm.hidden = true;
-
   const founder = isFounder(profile);
   accountName.textContent = profile.displayName || profile.fullName || "Board Portal";
   accountRole.textContent = profile.displayRole || profile.officerRole || profile.boardRole || "Director";
   founderOnlyElements.forEach((element) => {
     element.hidden = !founder;
   });
-
   accountStatusMetric.textContent = profile.accountStatus === "active" ? "Active" : profile.accountStatus || "Unknown";
   accountNumberMetric.textContent = profile.directorNumber ? `${profile.directorNumber} · Board identity verified.` : "Board identity verified.";
   profileName.textContent = profile.fullName || "—";
   profileBoardRole.textContent = profile.boardRole || "Director";
   profileOfficerRole.textContent = profile.officerRole || "None";
   profileVotingStatus.textContent = profile.votingStatus === "ineligible" ? "Ineligible" : "Eligible";
+}
 
+function watchCurrentProfile(uid) {
+  if (profileUnsubscribe) profileUnsubscribe();
+  profileUnsubscribe = onSnapshot(doc(db, "directors", uid), (snapshot) => {
+    if (!auth.currentUser || auth.currentUser.uid !== uid) return;
+    if (!snapshot.exists()) {
+      signOut(auth).catch(console.error);
+      return;
+    }
+
+    const profile = { uid: snapshot.id, ...snapshot.data() };
+    if (profile.accountStatus !== "active") {
+      signOut(auth).catch(console.error);
+      return;
+    }
+    applyProfileToUI(profile);
+  }, (error) => {
+    console.warn("Director profile listener closed", error);
+    if (auth.currentUser?.uid === uid) signOut(auth).catch(console.error);
+  });
+}
+
+function showSignedIn(profile) {
+  signedOutView.hidden = true;
+  signedInView.hidden = false;
+  loginForm.hidden = false;
+  pinSetupForm.hidden = true;
+  applyProfileToUI(profile);
   switchPortalView("overview");
-  if (founder) loadFounderAccounts().catch(console.error);
+  watchCurrentProfile(profile.uid);
+  if (isFounder(profile)) loadFounderAccounts().catch(console.error);
 }
 
 async function loadDirectorProfile(uid) {
@@ -206,14 +258,12 @@ async function lookupName() {
       loginStep = "activation";
       activationField.hidden = false;
       pinField.hidden = true;
-      continueButton.textContent = "Verify activation code";
       loginInstructions.textContent = `Activate the Board account for ${fullName}.`;
       activationCodeInput.focus();
     } else {
       loginStep = "pin";
       activationField.hidden = true;
       pinField.hidden = false;
-      continueButton.textContent = "Sign in";
       loginInstructions.textContent = `Enter the four-digit PIN for ${fullName}.`;
       pinInput.focus();
     }
@@ -222,6 +272,7 @@ async function lookupName() {
     loginMessage.textContent = "The portal could not check that Board identity.";
   } finally {
     setBusy(continueButton, false);
+    syncLoginButtonLabel();
   }
 }
 
@@ -242,6 +293,7 @@ async function activateWithCode() {
     loginMessage.textContent = authErrorMessage(error);
   } finally {
     setBusy(continueButton, false);
+    syncLoginButtonLabel();
   }
 }
 
@@ -267,6 +319,7 @@ async function signInWithPin() {
     loginMessage.textContent = authErrorMessage(error);
   } finally {
     setBusy(continueButton, false);
+    syncLoginButtonLabel();
   }
 }
 
@@ -297,8 +350,6 @@ async function completePinSetup(event) {
     const loginRecord = currentLoginRecord || await loadLoginRecord(currentProfile.loginKey);
     if (!loginRecord?.authEmail) throw new Error("The account login record is unavailable.");
 
-    // Firebase requires a recent authenticated session for password changes. The
-    // activation-code sign-in immediately before this step satisfies that requirement.
     await updatePassword(auth.currentUser, buildPinPassword(pin, loginRecord.authEmail));
 
     const directorRef = doc(db, "directors", auth.currentUser.uid);
@@ -356,14 +407,54 @@ function switchPortalView(view) {
   placeholderCopy.textContent = copy;
 }
 
-function populatePermissionTemplates() {
-  permissionTemplateSelect.replaceChildren();
+function populateTemplateSelect(select) {
+  select.replaceChildren();
   Object.entries(PERMISSION_TEMPLATES).forEach(([key, template]) => {
     const option = document.createElement("option");
     option.value = key;
     option.textContent = template.label;
-    permissionTemplateSelect.append(option);
+    select.append(option);
   });
+}
+
+function populatePermissionTemplates() {
+  populateTemplateSelect(permissionTemplateSelect);
+  populateTemplateSelect(managePermissionTemplate);
+}
+
+function permissionLabel(permission) {
+  return permission
+    .split(".")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" · ");
+}
+
+function buildPermissionCheckboxes() {
+  permissionCheckboxes.replaceChildren();
+  Object.values(PERMISSIONS).forEach((permission) => {
+    const label = document.createElement("label");
+    label.className = "permission-option";
+    const input = document.createElement("input");
+    input.type = "checkbox";
+    input.name = "permission";
+    input.value = permission;
+    const text = document.createElement("span");
+    text.textContent = permissionLabel(permission);
+    label.append(input, text);
+    permissionCheckboxes.append(label);
+  });
+}
+
+function setPermissionSelection(permissions = []) {
+  const selected = new Set(Array.isArray(permissions) ? permissions : []);
+  permissionCheckboxes.querySelectorAll('input[name="permission"]').forEach((input) => {
+    input.checked = selected.has(input.value);
+  });
+}
+
+function getPermissionSelection() {
+  return Array.from(permissionCheckboxes.querySelectorAll('input[name="permission"]:checked'))
+    .map((input) => input.value);
 }
 
 function makeCell(text, className = "") {
@@ -374,13 +465,14 @@ function makeCell(text, className = "") {
 }
 
 function renderDirectorAccounts(accounts) {
+  founderAccounts = accounts;
   directorTableBody.replaceChildren();
   directorCount.textContent = String(accounts.length);
 
   if (!accounts.length) {
     const row = document.createElement("tr");
     const cell = makeCell("No director accounts have been created.", "empty-cell");
-    cell.colSpan = 4;
+    cell.colSpan = 5;
     row.append(cell);
     directorTableBody.append(row);
     return;
@@ -395,11 +487,27 @@ function renderDirectorAccounts(accounts) {
     number.textContent = director.directorNumber || director.uid;
     identityCell.append(name, number);
 
+    const manageCell = document.createElement("td");
+    if (director.root === true || director.systemRole === "founder_director") {
+      const protectedBadge = document.createElement("span");
+      protectedBadge.className = "protected-badge";
+      protectedBadge.textContent = "Protected";
+      manageCell.append(protectedBadge);
+    } else {
+      const manageButton = document.createElement("button");
+      manageButton.type = "button";
+      manageButton.className = "table-action";
+      manageButton.dataset.manageUid = director.uid;
+      manageButton.textContent = "Manage";
+      manageCell.append(manageButton);
+    }
+
     row.append(
       identityCell,
       makeCell(director.officerRole || director.boardRole || "Director"),
       makeCell(String(director.accountStatus || "unknown").replaceAll("_", " "), "status-cell"),
-      makeCell(director.root === true ? "Founder Root" : (PERMISSION_TEMPLATES[director.permissionTemplate]?.label || "Custom"))
+      makeCell(director.root === true ? "Founder Root" : (PERMISSION_TEMPLATES[director.permissionTemplate]?.label || "Custom")),
+      manageCell
     );
     directorTableBody.append(row);
   });
@@ -407,13 +515,64 @@ function renderDirectorAccounts(accounts) {
 
 async function loadFounderAccounts() {
   if (!isFounder(currentProfile)) return;
-  directorTableBody.innerHTML = '<tr><td colspan="4" class="empty-cell">Loading accounts…</td></tr>';
+  directorTableBody.innerHTML = '<tr><td colspan="5" class="empty-cell">Loading accounts…</td></tr>';
   try {
     const accounts = await listDirectorAccounts(currentProfile);
     renderDirectorAccounts(accounts);
   } catch (error) {
     console.error("Unable to load director accounts", error);
-    directorTableBody.innerHTML = '<tr><td colspan="4" class="empty-cell">Unable to load Board accounts.</td></tr>';
+    directorTableBody.innerHTML = '<tr><td colspan="5" class="empty-cell">Unable to load Board accounts.</td></tr>';
+  }
+}
+
+function openManageDirector(uid) {
+  const director = founderAccounts.find((entry) => entry.uid === uid);
+  if (!director || director.root === true || director.systemRole === "founder_director") return;
+
+  manageDirectorUid.value = director.uid;
+  manageDirectorName.textContent = director.fullName || "Director";
+  manageDirectorNumber.textContent = director.directorNumber || director.uid;
+  manageBoardRole.value = director.boardRole || "Director";
+  manageOfficerRole.value = director.officerRole || "";
+  manageAccountStatus.value = director.accountStatus || "active";
+  manageVotingStatus.value = director.votingStatus === "ineligible" ? "ineligible" : "eligible";
+  managePermissionTemplate.value = PERMISSION_TEMPLATES[director.permissionTemplate] ? director.permissionTemplate : "standard_director";
+  setPermissionSelection(director.permissions || []);
+  manageDirectorMessage.textContent = "";
+  manageDirectorPanel.hidden = false;
+  manageDirectorPanel.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function closeManageDirector() {
+  manageDirectorPanel.hidden = true;
+  manageDirectorForm.reset();
+  manageDirectorMessage.textContent = "";
+  setPermissionSelection([]);
+}
+
+async function handleManageDirector(event) {
+  event.preventDefault();
+  const uid = manageDirectorUid.value;
+  const saveButton = manageDirectorForm.querySelector('button[type="submit"]');
+  if (!uid || !isFounder(currentProfile)) return;
+
+  setBusy(saveButton, true, "Saving access…");
+  manageDirectorMessage.textContent = "";
+  try {
+    await updateDirectorAccess(uid, {
+      boardRole: manageBoardRole.value,
+      officerRole: manageOfficerRole.value,
+      accountStatus: manageAccountStatus.value,
+      votingStatus: manageVotingStatus.value,
+      permissions: getPermissionSelection()
+    }, currentProfile);
+    manageDirectorMessage.textContent = "Director access updated.";
+    await loadFounderAccounts();
+  } catch (error) {
+    console.error("Unable to update director access", error);
+    manageDirectorMessage.textContent = authErrorMessage(error);
+  } finally {
+    setBusy(saveButton, false);
   }
 }
 
@@ -443,7 +602,7 @@ async function handleCreateDirector(event) {
     createDirectorMessage.textContent = "Board account created successfully.";
     createDirectorForm.reset();
     document.querySelector("#director-board-role").value = "Director";
-    populatePermissionTemplates();
+    populateTemplateSelect(permissionTemplateSelect);
     await loadFounderAccounts();
   } catch (error) {
     console.error("Unable to create director account", error);
@@ -464,7 +623,17 @@ loginBackButton.addEventListener("click", () => resetLoginFlow({ keepName: true 
 pinSetupForm.addEventListener("submit", completePinSetup);
 signOutButton.addEventListener("click", async () => signOut(auth));
 createDirectorForm.addEventListener("submit", handleCreateDirector);
+manageDirectorForm.addEventListener("submit", handleManageDirector);
 refreshDirectorsButton.addEventListener("click", () => loadFounderAccounts());
+closeManageDirectorButton.addEventListener("click", closeManageDirector);
+cancelManageDirectorButton.addEventListener("click", closeManageDirector);
+applyPermissionTemplateButton.addEventListener("click", () => {
+  setPermissionSelection(permissionsForTemplate(managePermissionTemplate.value));
+});
+directorTableBody.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-manage-uid]");
+  if (button) openManageDirector(button.dataset.manageUid);
+});
 copyActivationButton.addEventListener("click", async () => {
   try {
     await navigator.clipboard.writeText(activationResultCode.textContent);
@@ -480,12 +649,19 @@ navItems.forEach((item) => {
 });
 
 populatePermissionTemplates();
+buildPermissionCheckboxes();
 resetLoginFlow();
 
 onAuthStateChanged(auth, async (user) => {
   if (!user) {
+    if (profileUnsubscribe) {
+      profileUnsubscribe();
+      profileUnsubscribe = null;
+    }
     currentProfile = null;
     currentLoginRecord = null;
+    founderAccounts = [];
+    closeManageDirector();
     loginForm.hidden = false;
     pinSetupForm.hidden = true;
     showSignedOut();
