@@ -103,16 +103,13 @@ service cloud.firestore {
       allow delete: if false;
     }
 
-    // Pre-auth exact-name lookup. Collection listing is never public.
     match /loginDirectory/{loginKey} {
       allow get: if true;
       allow list: if false;
-
       allow create: if founderDirector()
         && request.resource.data.directorUid is string
         && request.resource.data.authEmail is string
         && request.resource.data.activationRequired == true;
-
       allow update: if founderDirector()
         || (
           signedIn()
@@ -122,17 +119,13 @@ service cloud.firestore {
           && resource.data.activationRequired == true
           && request.resource.data.activationRequired == false
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-            'activationRequired',
-            'activatedAt',
-            'updatedAt'
+            'activationRequired', 'activatedAt', 'updatedAt'
           ])
         );
-
       allow delete: if false;
     }
 
     // Phase 3: ordinary directors may only read currently published notices.
-    // The client queries status == 'published'; notice managers may inspect all.
     match /announcements/{noticeId} {
       allow get, list: if hasCapability('announcements.manage')
         || (activeDirector() && resource.data.status == 'published');
@@ -156,10 +149,7 @@ service cloud.firestore {
     function canReadDocumentData(data) {
       return founderDirector()
         || hasCapability('documents.review')
-        || (
-          activeDirector()
-          && data.submittedBy == request.auth.uid
-        )
+        || (activeDirector() && data.submittedBy == request.auth.uid)
         || (
           hasCapability('documents.view')
           && (
@@ -207,18 +197,34 @@ service cloud.firestore {
         ]);
     }
 
+    function validReviewTransition() {
+      return (
+          resource.data.status == 'submitted'
+          && request.resource.data.status in ['under_review', 'returned_for_revision', 'agenda_ready', 'rejected', 'tabled', 'archived']
+        ) || (
+          resource.data.status == 'under_review'
+          && request.resource.data.status in ['returned_for_revision', 'agenda_ready', 'approved', 'rejected', 'tabled', 'archived']
+        ) || (
+          resource.data.status == 'returned_for_revision'
+          && request.resource.data.status == 'archived'
+        ) || (
+          resource.data.status == 'agenda_ready'
+          && request.resource.data.status in ['approved', 'rejected', 'tabled', 'archived']
+        ) || (
+          resource.data.status in ['approved', 'rejected', 'tabled']
+          && request.resource.data.status == 'archived'
+        );
+    }
+
     function reviewerMayUpdateDocument() {
       return hasCapability('documents.review')
+        && validReviewTransition()
         && request.resource.data.submittedBy == resource.data.submittedBy
         && request.resource.data.documentNumber == resource.data.documentNumber
         && request.resource.data.createdAt == resource.data.createdAt
         && request.resource.data.accessScope == resource.data.accessScope
         && request.resource.data.allowedDirectorUids == resource.data.allowedDirectorUids
         && request.resource.data.category == resource.data.category
-        && request.resource.data.status in [
-          'under_review', 'returned_for_revision', 'agenda_ready',
-          'approved', 'rejected', 'tabled', 'archived'
-        ]
         && request.resource.data.updatedBy == request.auth.uid
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
           'status', 'reviewNote', 'reviewedBy', 'reviewedByName',
@@ -249,9 +255,8 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
-    // Human-readable director numbers use one counter document. All Phase 1-4
-    // collection searching/filtering/sorting remains client-side or uses a single
-    // equality/array-contains filter; no manual/composite indexes are deployed.
+    // Phase 1-4 queries use direct reads or one equality/array-contains filter.
+    // No manual/composite Firestore indexes are defined or deployed.
     match /system/{systemDocument} {
       allow read, create, update: if founderDirector();
       allow delete: if false;
@@ -264,7 +269,6 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
-    // Future governance collections remain closed until their implementation phase.
     match /{document=**} {
       allow read, write: if false;
     }
