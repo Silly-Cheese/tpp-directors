@@ -50,6 +50,16 @@ const GOOGLE_HOSTS = new Set([
 const STATUS_SET = new Set(DOCUMENT_STATUSES);
 const CATEGORY_SET = new Set(DOCUMENT_CATEGORIES);
 const ACCESS_SET = new Set(DOCUMENT_ACCESS_SCOPES);
+const REVIEW_TRANSITIONS = Object.freeze({
+  submitted: new Set(["under_review", "returned_for_revision", "agenda_ready", "rejected", "tabled", "archived"]),
+  under_review: new Set(["returned_for_revision", "agenda_ready", "approved", "rejected", "tabled", "archived"]),
+  returned_for_revision: new Set(["archived"]),
+  agenda_ready: new Set(["approved", "rejected", "tabled", "archived"]),
+  approved: new Set(["archived"]),
+  rejected: new Set(["archived"]),
+  tabled: new Set(["archived"]),
+  archived: new Set()
+});
 
 function requireAuthenticated() {
   if (!auth.currentUser) throw new Error("Sign in to continue.");
@@ -120,6 +130,10 @@ export function documentStatusLabel(status = "") {
     .replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
+export function isAllowedReviewTransition(currentStatus, nextStatus) {
+  return REVIEW_TRANSITIONS[currentStatus]?.has(nextStatus) === true;
+}
+
 export function canReviewDocuments(profile) {
   return hasPermission(profile, PERMISSIONS.DOCUMENTS_REVIEW);
 }
@@ -131,25 +145,17 @@ export function canSeeDocumentLocally(documentRecord, profile) {
   if (!hasPermission(profile, PERMISSIONS.DOCUMENTS_VIEW)) return false;
 
   switch (documentRecord.accessScope) {
-    case "board":
-      return true;
-    case "officers":
-      return Boolean(profile.officerRole);
-    case "restricted":
-      return Array.isArray(documentRecord.allowedDirectorUids)
-        && documentRecord.allowedDirectorUids.includes(auth.currentUser.uid);
-    case "founder":
-      return profile.root === true && profile.systemRole === "founder_director";
-    default:
-      return false;
+    case "board": return true;
+    case "officers": return Boolean(profile.officerRole);
+    case "restricted": return Array.isArray(documentRecord.allowedDirectorUids) && documentRecord.allowedDirectorUids.includes(auth.currentUser.uid);
+    case "founder": return profile.root === true && profile.systemRole === "founder_director";
+    default: return false;
   }
 }
 
 function cleanAllowedDirectors(scope, values = []) {
   if (scope !== "restricted") return [];
-  const cleaned = [...new Set((Array.isArray(values) ? values : [])
-    .map((value) => String(value).trim())
-    .filter(Boolean))];
+  const cleaned = [...new Set((Array.isArray(values) ? values : []).map((value) => String(value).trim()).filter(Boolean))];
   if (!cleaned.length) throw new Error("Choose at least one director for a restricted document.");
   return cleaned.slice(0, 25);
 }
@@ -161,7 +167,6 @@ function makeDocumentNumber(refId) {
 
 export async function submitBoardDocument(input, profile) {
   requirePermission(profile, PERMISSIONS.DOCUMENTS_SUBMIT, "Your account is not authorized to submit Board documents.");
-
   const title = String(input.title ?? "").trim();
   const description = String(input.description ?? "").trim();
   const requestedAction = String(input.requestedAction ?? "").trim();
@@ -174,11 +179,6 @@ export async function submitBoardDocument(input, profile) {
   const allowedDirectorUids = cleanAllowedDirectors(accessScope, input.allowedDirectorUids);
   const documentRef = doc(collection(db, "documents"));
   const eventRef = doc(collection(db, "documentEvents"));
-  const nowFields = {
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp()
-  };
-
   const record = {
     documentNumber: makeDocumentNumber(documentRef.id),
     title,
@@ -201,7 +201,8 @@ export async function submitBoardDocument(input, profile) {
     agendaMeetingId: null,
     archivedAt: null,
     updatedBy: auth.currentUser.uid,
-    ...nowFields
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp()
   };
 
   const batch = writeBatch(db);
@@ -229,20 +230,16 @@ export async function listBoardDocuments(profile) {
     documents = snapshot.docs.map((entry) => ({ id: entry.id, ...entry.data() }));
   } else {
     const reads = [getDocs(query(documentsRef, where("submittedBy", "==", auth.currentUser.uid)))];
-
     if (hasPermission(profile, PERMISSIONS.DOCUMENTS_VIEW)) {
       reads.push(getDocs(query(documentsRef, where("accessScope", "==", "board"))));
       if (profile.officerRole) reads.push(getDocs(query(documentsRef, where("accessScope", "==", "officers"))));
       reads.push(getDocs(query(documentsRef, where("allowedDirectorUids", "array-contains", auth.currentUser.uid))));
     }
-
     const snapshots = await Promise.all(reads);
     documents = dedupeById(snapshots.flatMap((snapshot) => snapshot.docs.map((entry) => ({ id: entry.id, ...entry.data() }))));
   }
 
-  return documents
-    .filter((entry) => canSeeDocumentLocally(entry, profile))
-    .sort((a, b) => timestampValue(b.updatedAt) - timestampValue(a.updatedAt));
+  return documents.filter((entry) => canSeeDocumentLocally(entry, profile)).sort((a, b) => timestampValue(b.updatedAt) - timestampValue(a.updatedAt));
 }
 
 export async function getBoardDocument(documentId, profile) {
@@ -257,18 +254,14 @@ export async function getBoardDocument(documentId, profile) {
 export async function listDocumentEvents(documentId, profile) {
   await getBoardDocument(documentId, profile);
   const snapshot = await getDocs(query(collection(db, "documentEvents"), where("documentId", "==", documentId)));
-  return snapshot.docs
-    .map((entry) => ({ id: entry.id, ...entry.data() }))
-    .sort((a, b) => timestampValue(a.createdAt) - timestampValue(b.createdAt));
+  return snapshot.docs.map((entry) => ({ id: entry.id, ...entry.data() })).sort((a, b) => timestampValue(a.createdAt) - timestampValue(b.createdAt));
 }
 
 export async function reviseBoardDocument(documentId, input, profile) {
   requireAuthenticated();
   const record = await getBoardDocument(documentId, profile);
   if (record.submittedBy !== auth.currentUser.uid) throw new Error("Only the submitting director can revise this document.");
-  if (!["submitted", "returned_for_revision"].includes(record.status)) {
-    throw new Error("This document cannot be revised in its current status.");
-  }
+  if (!["submitted", "returned_for_revision"].includes(record.status)) throw new Error("This document cannot be revised in its current status.");
 
   const documentUrl = normalizeGoogleDocumentLink(input.documentUrl || record.documentUrl);
   const title = String(input.title ?? record.title).trim();
@@ -321,11 +314,12 @@ export async function reviewBoardDocument(documentId, action, note, profile) {
   });
   const nextStatus = transitions[action];
   if (!STATUS_SET.has(nextStatus)) throw new Error("Choose a valid document action.");
+  if (!isAllowedReviewTransition(record.status, nextStatus)) {
+    throw new Error(`A document in ${documentStatusLabel(record.status)} status cannot be moved directly to ${documentStatusLabel(nextStatus)}.`);
+  }
 
   const reviewNote = String(note ?? "").trim() || null;
-  if (["return_revision", "reject"].includes(action) && !reviewNote) {
-    throw new Error("Enter a review note explaining this action.");
-  }
+  if (["return_revision", "reject"].includes(action) && !reviewNote) throw new Error("Enter a review note explaining this action.");
 
   const eventRef = doc(collection(db, "documentEvents"));
   const reviewerName = profile.displayName || profile.fullName || "Board Reviewer";
@@ -358,9 +352,7 @@ export function summarizeDocuments(entries = [], profile = {}) {
   return {
     accessible: visible.length,
     mine: visible.filter((entry) => entry.submittedBy === currentUid).length,
-    inbox: canReviewDocuments(profile)
-      ? visible.filter((entry) => ["submitted", "under_review"].includes(entry.status)).length
-      : 0,
+    inbox: canReviewDocuments(profile) ? visible.filter((entry) => ["submitted", "under_review"].includes(entry.status)).length : 0,
     agendaReady: visible.filter((entry) => entry.status === "agenda_ready").length
   };
 }
