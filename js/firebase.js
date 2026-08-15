@@ -36,5 +36,7 @@ if (typeof window !== "undefined") {
     .then(() => import("./phase6-recorded-audit.js"))
     .then(() => import("./phase7.js"))
     .then(() => import("./phase7-sync.js"))
+    .then(() => import("./phase7-preflight.js"))
+    .then(() => import("./phase8.js"))
     .catch((error) => console.error("Unable to load Board governance modules", error));
 }
