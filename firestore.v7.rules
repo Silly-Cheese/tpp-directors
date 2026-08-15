@@ -1,0 +1,727 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    function directorPath(uid) { return /databases/$(database)/documents/directors/$(uid); }
+    function meetingPath(id) { return /databases/$(database)/documents/meetings/$(id); }
+    function attendancePath(meetingId, uid) { return /databases/$(database)/documents/meetingAttendance/$(meetingId + '_' + uid); }
+    function agendaPath(id) { return /databases/$(database)/documents/agendaItems/$(id); }
+    function motionPath(id) { return /databases/$(database)/documents/motions/$(id); }
+    function votePath(id) { return /databases/$(database)/documents/votes/$(id); }
+    function resolutionPath(id) { return /databases/$(database)/documents/resolutions/$(id); }
+    function minutesPath(id) { return /databases/$(database)/documents/meetingMinutes/$(id); }
+    function recordPath(id) { return /databases/$(database)/documents/meetingRecords/$(id); }
+    function documentEventPath(id) { return /databases/$(database)/documents/documentEvents/$(id); }
+
+    function hasDirector(uid) { return signedIn() && exists(directorPath(uid)); }
+    function currentDirector() { return get(directorPath(request.auth.uid)).data; }
+    function activeDirector() { return hasDirector(request.auth.uid) && currentDirector().accountStatus == 'active'; }
+    function founderDirector() {
+      return activeDirector() && currentDirector().systemRole == 'founder_director' && currentDirector().root == true;
+    }
+    function hasCapability(capability) {
+      return founderDirector() || (
+        activeDirector() && currentDirector().permissions is list
+        && currentDirector().permissions.hasAny(['*', capability])
+      );
+    }
+    function isOfficer() { return activeDirector() && currentDirector().officerRole != null; }
+    function meetingCurrent(id) { return get(meetingPath(id)).data; }
+    function meetingAfter(id) { return getAfter(meetingPath(id)).data; }
+    function voteCurrent(id) { return get(votePath(id)).data; }
+    function voteAfter(id) { return getAfter(votePath(id)).data; }
+    function documentBefore(id) { return get(/databases/$(database)/documents/documents/$(id)).data; }
+    function documentAfter(id) { return getAfter(/databases/$(database)/documents/documents/$(id)).data; }
+    function presentVotingDirector(meetingId, uid) {
+      return exists(attendancePath(meetingId, uid))
+        && get(attendancePath(meetingId, uid)).data.presenceStatus == 'present'
+        && get(attendancePath(meetingId, uid)).data.votingEligible == true;
+    }
+
+    function validGoogleUrl(value) {
+      return value is string && value.matches('^https://(docs|drive|sheets|slides)[.]google[.]com/.*$');
+    }
+
+    // Accounts and Board directory
+    match /directors/{directorId} {
+      allow get: if founderDirector() || (
+        signedIn() && request.auth.uid == directorId
+        && resource.data.accountStatus in ['awaiting_activation', 'active', 'pin_reset_required']
+      );
+      allow list: if founderDirector();
+      allow create: if founderDirector()
+        && request.resource.data.root == false
+        && request.resource.data.systemRole == 'director'
+        && request.resource.data.accountStatus == 'awaiting_activation'
+        && request.resource.data.directorNumber is string
+        && request.resource.data.fullName is string
+        && request.resource.data.loginKey is string
+        && request.resource.data.permissions is list;
+      allow update: if (
+        founderDirector()
+        && resource.data.root != true
+        && request.resource.data.root == false
+        && request.resource.data.systemRole != 'founder_director'
+        && request.resource.data.directorNumber == resource.data.directorNumber
+        && request.resource.data.loginKey == resource.data.loginKey
+        && request.resource.data.normalizedName == resource.data.normalizedName
+      ) || (
+        signedIn() && request.auth.uid == directorId
+        && resource.data.accountStatus in ['awaiting_activation', 'pin_reset_required']
+        && request.resource.data.accountStatus == 'active'
+        && request.resource.data.updatedBy == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'accountStatus', 'activationCompletedAt', 'updatedAt', 'updatedBy'
+        ])
+      );
+      allow delete: if false;
+    }
+
+    match /boardDirectory/{directorId} {
+      allow get, list: if founderDirector() || (hasCapability('directors.view') && resource.data.directoryVisible == true);
+      allow create, update: if founderDirector()
+        && request.resource.data.directorNumber is string
+        && request.resource.data.fullName is string
+        && request.resource.data.boardStatus in ['interim', 'confirmed', 'leave_of_absence', 'former'];
+      allow delete: if false;
+    }
+
+    match /loginDirectory/{loginKey} {
+      allow get: if true;
+      allow list: if false;
+      allow create: if founderDirector()
+        && request.resource.data.directorUid is string
+        && request.resource.data.authEmail is string
+        && request.resource.data.activationRequired == true;
+      allow update: if founderDirector() || (
+        signedIn() && resource.data.directorUid == request.auth.uid
+        && request.resource.data.directorUid == resource.data.directorUid
+        && request.resource.data.authEmail == resource.data.authEmail
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'activationRequired', 'activatedAt', 'pinResetPreparedAt', 'updatedAt'
+        ])
+      );
+      allow delete: if false;
+    }
+
+    match /announcements/{noticeId} {
+      allow get, list: if hasCapability('announcements.manage') || (activeDirector() && resource.data.status == 'published');
+      allow create: if hasCapability('announcements.manage')
+        && request.resource.data.title is string
+        && request.resource.data.body is string
+        && request.resource.data.status == 'published'
+        && request.resource.data.priority in ['normal', 'important', 'urgent']
+        && request.resource.data.createdBy == request.auth.uid;
+      allow update: if hasCapability('announcements.manage') && request.resource.data.createdBy == resource.data.createdBy;
+      allow delete: if false;
+    }
+
+    // Google-linked Board documents
+    function validDocumentAccess(data) {
+      return data.accessScope in ['board', 'officers', 'restricted', 'founder']
+        && data.allowedDirectorUids is list
+        && data.allowedDirectorUids.size() <= 25
+        && ((data.accessScope == 'restricted' && data.allowedDirectorUids.size() > 0)
+          || (data.accessScope != 'restricted' && data.allowedDirectorUids.size() == 0));
+    }
+    function canReadDocument(data) {
+      return founderDirector()
+        || (activeDirector() && data.submittedBy == request.auth.uid)
+        || (hasCapability('documents.review') && data.accessScope != 'founder')
+        || (hasCapability('documents.view') && (
+          data.accessScope == 'board'
+          || (data.accessScope == 'officers' && isOfficer())
+          || (data.accessScope == 'restricted' && request.auth.uid in data.allowedDirectorUids)
+        ));
+    }
+    function validNewDocument() {
+      return hasCapability('documents.submit')
+        && request.resource.data.documentNumber is string
+        && request.resource.data.title is string
+        && request.resource.data.description is string
+        && validGoogleUrl(request.resource.data.documentUrl)
+        && request.resource.data.category in ['governance','policy','financial','program','committee','report','legal','minutes','other']
+        && request.resource.data.status == 'submitted'
+        && request.resource.data.submittedBy == request.auth.uid
+        && request.resource.data.revisionNumber == 1
+        && request.resource.data.lastEventId is string
+        && !exists(documentEventPath(request.resource.data.lastEventId))
+        && request.resource.data.submittedAt == request.time
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time
+        && validDocumentAccess(request.resource.data);
+    }
+    function submitterRevision() {
+      return activeDirector() && resource.data.submittedBy == request.auth.uid
+        && resource.data.status in ['submitted', 'returned_for_revision']
+        && request.resource.data.submittedBy == resource.data.submittedBy
+        && request.resource.data.documentNumber == resource.data.documentNumber
+        && request.resource.data.accessScope == resource.data.accessScope
+        && request.resource.data.allowedDirectorUids == resource.data.allowedDirectorUids
+        && request.resource.data.category == resource.data.category
+        && validGoogleUrl(request.resource.data.documentUrl)
+        && request.resource.data.status == 'submitted'
+        && request.resource.data.revisionNumber == resource.data.revisionNumber + 1
+        && request.resource.data.lastEventId != resource.data.lastEventId
+        && !exists(documentEventPath(request.resource.data.lastEventId))
+        && request.resource.data.updatedBy == request.auth.uid
+        && request.resource.data.updatedAt == request.time
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'title','description','documentUrl','linkType','requestedAction','status','revisionNumber',
+          'reviewNote','reviewedBy','reviewedByName','reviewedAt','lastEventId','updatedAt','updatedBy'
+        ]);
+    }
+    function validReviewTransition() {
+      return (resource.data.status == 'submitted' && request.resource.data.status in ['under_review','returned_for_revision','agenda_ready','rejected','tabled','archived'])
+        || (resource.data.status == 'under_review' && request.resource.data.status in ['returned_for_revision','agenda_ready','approved','rejected','tabled','archived'])
+        || (resource.data.status == 'returned_for_revision' && request.resource.data.status == 'archived')
+        || (resource.data.status == 'agenda_ready' && request.resource.data.status in ['approved','rejected','tabled','archived'])
+        || (resource.data.status in ['approved','rejected','tabled'] && request.resource.data.status == 'archived');
+    }
+    function reviewerUpdate() {
+      return (founderDirector() || (hasCapability('documents.review') && resource.data.accessScope != 'founder'))
+        && validReviewTransition()
+        && request.resource.data.submittedBy == resource.data.submittedBy
+        && request.resource.data.documentNumber == resource.data.documentNumber
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.accessScope == resource.data.accessScope
+        && request.resource.data.allowedDirectorUids == resource.data.allowedDirectorUids
+        && request.resource.data.category == resource.data.category
+        && request.resource.data.lastEventId != resource.data.lastEventId
+        && !exists(documentEventPath(request.resource.data.lastEventId))
+        && request.resource.data.reviewedBy == request.auth.uid
+        && request.resource.data.reviewedAt == request.time
+        && request.resource.data.updatedBy == request.auth.uid
+        && request.resource.data.updatedAt == request.time
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'status','reviewNote','reviewedBy','reviewedByName','reviewedAt','archivedAt','lastEventId','updatedAt','updatedBy'
+        ]);
+    }
+    function agendaAttachDocument() {
+      return hasCapability('agenda.manage')
+        && resource.data.status == 'agenda_ready' && resource.data.agendaMeetingId == null
+        && request.resource.data.agendaMeetingId is string
+        && meetingCurrent(request.resource.data.agendaMeetingId).status in ['scheduled','checkin_open','in_session','recessed']
+        && request.resource.data.updatedBy == request.auth.uid
+        && request.resource.data.updatedAt == request.time
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['agendaMeetingId','updatedAt','updatedBy']);
+    }
+
+    match /documents/{documentId} {
+      allow get, list: if canReadDocument(resource.data);
+      allow create: if validNewDocument();
+      allow update: if submitterRevision() || reviewerUpdate() || agendaAttachDocument();
+      allow delete: if false;
+    }
+
+    function validDocumentEvent(eventId) {
+      return activeDirector()
+        && request.resource.data.documentId is string
+        && request.resource.data.actorUid == request.auth.uid
+        && request.resource.data.createdAt == request.time
+        && eventId == documentAfter(request.resource.data.documentId).lastEventId
+        && canReadDocument(documentAfter(request.resource.data.documentId))
+        && (
+          (request.resource.data.type == 'submitted'
+            && documentAfter(request.resource.data.documentId).status == 'submitted'
+            && documentAfter(request.resource.data.documentId).revisionNumber == 1
+            && documentAfter(request.resource.data.documentId).submittedBy == request.auth.uid)
+          || (request.resource.data.type in ['revised','resubmitted']
+            && documentAfter(request.resource.data.documentId).status == 'submitted'
+            && documentAfter(request.resource.data.documentId).revisionNumber == documentBefore(request.resource.data.documentId).revisionNumber + 1
+            && documentBefore(request.resource.data.documentId).submittedBy == request.auth.uid)
+          || (request.resource.data.type in ['under_review','returned_for_revision','agenda_ready','approved','rejected','tabled','archived']
+            && documentAfter(request.resource.data.documentId).status == request.resource.data.type
+            && documentAfter(request.resource.data.documentId).reviewedBy == request.auth.uid)
+        );
+    }
+    match /documentEvents/{eventId} {
+      allow get, list: if signedIn() && resource.data.documentId is string && canReadDocument(documentBefore(resource.data.documentId));
+      allow create: if validDocumentEvent(eventId);
+      allow update, delete: if false;
+    }
+
+    // Meetings, attendance and active-vote lock
+    function validMeetingCreate() {
+      return hasCapability('meetings.create')
+        && request.resource.data.meetingNumber is string
+        && request.resource.data.title is string
+        && request.resource.data.meetingType in ['regular','special','organizational','emergency']
+        && request.resource.data.scheduledFor is string
+        && request.resource.data.locationMode in ['in_person','virtual','hybrid']
+        && request.resource.data.status == 'scheduled'
+        && request.resource.data.invitedDirectorUids is list
+        && request.resource.data.invitedDirectorUids.size() > 0
+        && request.resource.data.invitedDirectorUids.size() <= 100
+        && request.resource.data.eligibleVotingDirectorUids is list
+        && request.resource.data.invitedDirectorUids.hasAll(request.resource.data.eligibleVotingDirectorUids)
+        && request.resource.data.quorumRequired is int
+        && request.resource.data.quorumRequired > 0
+        && request.resource.data.quorumRequired <= request.resource.data.eligibleVotingDirectorUids.size()
+        && request.resource.data.activeVoteId == null
+        && request.resource.data.recordStatus == 'uncertified'
+        && request.resource.data.recordId == null
+        && request.resource.data.minutesId == null
+        && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time;
+    }
+    function meetingActivation() {
+      return hasCapability('meetings.activate')
+        && resource.data.status == 'scheduled' && request.resource.data.status == 'checkin_open'
+        && request.resource.data.checkInOpenedAt == request.time
+        && request.resource.data.updatedBy == request.auth.uid && request.resource.data.updatedAt == request.time
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','checkInOpenedAt','updatedAt','updatedBy']);
+    }
+    function meetingControl() {
+      return hasCapability('meetings.control')
+        && request.resource.data.updatedBy == request.auth.uid && request.resource.data.updatedAt == request.time
+        && (
+          (resource.data.status == 'scheduled' && request.resource.data.status == 'cancelled'
+            && request.resource.data.cancelledAt == request.time
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','cancelledAt','updatedAt','updatedBy']))
+          || (resource.data.status == 'checkin_open' && request.resource.data.status == 'in_session'
+            && request.resource.data.calledToOrderAt == request.time
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','calledToOrderAt','updatedAt','updatedBy']))
+          || (resource.data.status == 'checkin_open' && request.resource.data.status == 'cancelled'
+            && request.resource.data.cancelledAt == request.time
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','cancelledAt','updatedAt','updatedBy']))
+          || (resource.data.status == 'in_session' && request.resource.data.status == 'recessed'
+            && resource.data.activeVoteId == null
+            && request.resource.data.recessedAt == request.time
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','recessedAt','updatedAt','updatedBy']))
+          || (resource.data.status == 'recessed' && request.resource.data.status == 'in_session'
+            && request.resource.data.resumedAt == request.time
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','resumedAt','updatedAt','updatedBy']))
+          || (resource.data.status in ['in_session','recessed'] && request.resource.data.status == 'adjourned'
+            && resource.data.activeVoteId == null
+            && request.resource.data.adjournedAt == request.time
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','adjournedAt','updatedAt','updatedBy']))
+        );
+    }
+    function acquireVoteLock(meetingId) {
+      return hasCapability('votes.push')
+        && resource.data.status == 'in_session' && resource.data.activeVoteId == null
+        && request.resource.data.activeVoteId is string
+        && voteAfter(request.resource.data.activeVoteId).meetingId == meetingId
+        && voteAfter(request.resource.data.activeVoteId).status == 'open'
+        && request.resource.data.updatedAt == request.time && request.resource.data.updatedBy == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['activeVoteId','updatedAt','updatedBy']);
+    }
+    function releaseVoteLock() {
+      return hasCapability('votes.close')
+        && resource.data.status == 'in_session' && resource.data.activeVoteId is string
+        && request.resource.data.activeVoteId == null
+        && voteAfter(resource.data.activeVoteId).status == 'closed'
+        && request.resource.data.updatedAt == request.time && request.resource.data.updatedBy == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['activeVoteId','updatedAt','updatedBy']);
+    }
+    function certifyMeeting(meetingId) {
+      return hasCapability('records.certify')
+        && resource.data.status == 'adjourned' && resource.data.activeVoteId == null
+        && resource.data.recordStatus == 'uncertified'
+        && request.resource.data.recordStatus == 'certified'
+        && request.resource.data.recordId == meetingId && request.resource.data.minutesId == meetingId
+        && request.resource.data.certifiedAt == request.time && request.resource.data.certifiedBy == request.auth.uid
+        && getAfter(recordPath(meetingId)).data.recordStatus == 'certified'
+        && getAfter(minutesPath(meetingId)).data.status == 'certified'
+        && request.resource.data.updatedAt == request.time && request.resource.data.updatedBy == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'recordStatus','recordId','minutesId','certifiedAt','certifiedBy','certifiedByName','updatedAt','updatedBy'
+        ]);
+    }
+
+    match /meetings/{meetingId} {
+      allow get, list: if hasCapability('meetings.view');
+      allow create: if validMeetingCreate();
+      allow update: if meetingActivation() || meetingControl() || acquireVoteLock(meetingId) || releaseVoteLock() || certifyMeeting(meetingId);
+      allow delete: if false;
+    }
+
+    function validAttendanceCreate(attendanceIdValue) {
+      return hasCapability('meetings.create')
+        && request.resource.data.meetingId is string && request.resource.data.directorUid is string
+        && attendanceIdValue == request.resource.data.meetingId + '_' + request.resource.data.directorUid
+        && meetingAfter(request.resource.data.meetingId).createdBy == request.auth.uid
+        && meetingAfter(request.resource.data.meetingId).status == 'scheduled'
+        && request.resource.data.directorUid in meetingAfter(request.resource.data.meetingId).invitedDirectorUids
+        && request.resource.data.votingEligible == (request.resource.data.directorUid in meetingAfter(request.resource.data.meetingId).eligibleVotingDirectorUids)
+        && request.resource.data.presenceStatus == 'invited'
+        && request.resource.data.createdAt == request.time && request.resource.data.updatedAt == request.time;
+    }
+    function selfCheckIn() {
+      return activeDirector() && resource.data.directorUid == request.auth.uid
+        && meetingCurrent(resource.data.meetingId).status in ['checkin_open','in_session','recessed']
+        && resource.data.presenceStatus in ['invited','departed']
+        && request.resource.data.presenceStatus == 'present'
+        && request.resource.data.updatedBy == request.auth.uid
+        && request.resource.data.updatedAt == request.time && request.resource.data.lastPresenceChangeAt == request.time
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['presenceStatus','checkedInAt','returnedAt','lastPresenceChangeAt','updatedAt','updatedBy']);
+    }
+    function manageAttendance() {
+      return hasCapability('meetings.attendance.manage')
+        && meetingCurrent(resource.data.meetingId).status in ['scheduled','checkin_open','in_session','recessed']
+        && request.resource.data.meetingId == resource.data.meetingId
+        && request.resource.data.directorUid == resource.data.directorUid
+        && request.resource.data.directorNumber == resource.data.directorNumber
+        && request.resource.data.directorName == resource.data.directorName
+        && request.resource.data.votingEligible == resource.data.votingEligible
+        && request.resource.data.presenceStatus in ['invited','present','departed','excused','absent']
+        && request.resource.data.updatedBy == request.auth.uid
+        && request.resource.data.updatedAt == request.time && request.resource.data.lastPresenceChangeAt == request.time
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'presenceStatus','checkedInAt','departedAt','returnedAt','excusedAt','absentAt','lastPresenceChangeAt','updatedAt','updatedBy'
+        ]);
+    }
+    match /meetingAttendance/{attendanceIdValue} {
+      allow get, list: if hasCapability('meetings.view');
+      allow create: if validAttendanceCreate(attendanceIdValue);
+      allow update: if selfCheckIn() || manageAttendance();
+      allow delete: if false;
+    }
+
+    // Agenda and motions
+    function validAgendaCreate() {
+      return hasCapability('agenda.manage')
+        && request.resource.data.meetingId is string
+        && meetingCurrent(request.resource.data.meetingId).status in ['scheduled','checkin_open','in_session','recessed']
+        && request.resource.data.agendaNumber is string && request.resource.data.order is int
+        && request.resource.data.itemType in ['business','report','motion','resolution','election','other']
+        && request.resource.data.title is string && request.resource.data.status == 'queued'
+        && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.createdAt == request.time && request.resource.data.updatedAt == request.time
+        && (request.resource.data.documentId == null || (
+          request.resource.data.documentId is string
+          && documentAfter(request.resource.data.documentId).agendaMeetingId == request.resource.data.meetingId
+          && documentAfter(request.resource.data.documentId).status == 'agenda_ready'
+        ));
+    }
+    function agendaManagerUpdate() {
+      return hasCapability('agenda.manage')
+        && meetingCurrent(resource.data.meetingId).status in ['scheduled','checkin_open','in_session','recessed']
+        && request.resource.data.status in ['queued','active','completed','tabled','withdrawn']
+        && request.resource.data.updatedBy == request.auth.uid && request.resource.data.updatedAt == request.time
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','updatedAt','updatedBy']);
+    }
+    function motionActivatesAgenda() {
+      return hasCapability('motions.create')
+        && meetingCurrent(resource.data.meetingId).status == 'in_session'
+        && !(resource.data.status in ['completed','tabled','withdrawn'])
+        && request.resource.data.status == 'active'
+        && request.resource.data.updatedBy == request.auth.uid && request.resource.data.updatedAt == request.time
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','updatedAt','updatedBy']);
+    }
+    function voteUpdatesAgenda() {
+      return meetingCurrent(resource.data.meetingId).status == 'in_session'
+        && request.resource.data.updatedBy == request.auth.uid && request.resource.data.updatedAt == request.time
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','updatedAt','updatedBy'])
+        && ((hasCapability('votes.push') && request.resource.data.status == 'active')
+          || (hasCapability('votes.close') && request.resource.data.status == 'completed'));
+    }
+    match /agendaItems/{agendaId} {
+      allow get, list: if hasCapability('meetings.view');
+      allow create: if validAgendaCreate();
+      allow update: if agendaManagerUpdate() || motionActivatesAgenda() || voteUpdatesAgenda();
+      allow delete: if false;
+    }
+
+    function validMotionCreate() {
+      return hasCapability('motions.create')
+        && request.resource.data.meetingId is string && request.resource.data.agendaItemId is string
+        && meetingCurrent(request.resource.data.meetingId).status == 'in_session'
+        && presentVotingDirector(request.resource.data.meetingId, request.auth.uid)
+        && get(agendaPath(request.resource.data.agendaItemId)).data.meetingId == request.resource.data.meetingId
+        && !(get(agendaPath(request.resource.data.agendaItemId)).data.status in ['completed','tabled','withdrawn'])
+        && request.resource.data.motionNumber is string && request.resource.data.motionText is string
+        && request.resource.data.status == 'pending_second'
+        && request.resource.data.movedByUid == request.auth.uid
+        && request.resource.data.secondedByUid == null && request.resource.data.voteId == null && request.resource.data.resolutionId == null
+        && request.resource.data.createdAt == request.time && request.resource.data.updatedAt == request.time;
+    }
+    function selfSecondMotion() {
+      return hasCapability('motions.second')
+        && resource.data.status == 'pending_second' && resource.data.movedByUid != request.auth.uid
+        && meetingCurrent(resource.data.meetingId).status == 'in_session'
+        && presentVotingDirector(resource.data.meetingId, request.auth.uid)
+        && request.resource.data.status == 'ready' && request.resource.data.secondedByUid == request.auth.uid
+        && request.resource.data.secondedAt == request.time && request.resource.data.updatedAt == request.time
+        && request.resource.data.updatedBy == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','secondedByUid','secondedByName','secondedAt','updatedAt','updatedBy']);
+    }
+    function startMotionVote(motionId) {
+      return hasCapability('votes.push')
+        && resource.data.status == 'ready' && meetingCurrent(resource.data.meetingId).status == 'in_session'
+        && request.resource.data.status == 'voting' && request.resource.data.voteId is string
+        && voteAfter(request.resource.data.voteId).motionId == motionId
+        && meetingAfter(resource.data.meetingId).activeVoteId == request.resource.data.voteId
+        && request.resource.data.updatedAt == request.time && request.resource.data.updatedBy == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','voteId','updatedAt','updatedBy']);
+    }
+    function finishMotionVote(motionId) {
+      return hasCapability('votes.close')
+        && resource.data.status == 'voting' && meetingCurrent(resource.data.meetingId).status == 'in_session'
+        && request.resource.data.status in ['adopted','failed'] && request.resource.data.resolutionId is string
+        && getAfter(resolutionPath(request.resource.data.resolutionId)).data.motionId == motionId
+        && request.resource.data.updatedAt == request.time && request.resource.data.updatedBy == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','resolutionId','updatedAt','updatedBy']);
+    }
+    match /motions/{motionId} {
+      allow get, list: if hasCapability('meetings.view');
+      allow create: if validMotionCreate();
+      allow update: if selfSecondMotion() || startMotionVote(motionId) || finishMotionVote(motionId);
+      allow delete: if false;
+    }
+
+    // Votes, ballots and recusals
+    function validVoteCreate(voteId) {
+      return hasCapability('votes.push')
+        && request.resource.data.meetingId is string && request.resource.data.motionId is string
+        && meetingCurrent(request.resource.data.meetingId).status == 'in_session'
+        && meetingAfter(request.resource.data.meetingId).activeVoteId == voteId
+        && request.resource.data.voteNumber is string && request.resource.data.status == 'open'
+        && request.resource.data.ballotVisibility in ['recorded','confidential']
+        && request.resource.data.thresholdMode in ['simple_majority_cast','majority_eligible','two_thirds_cast']
+        && request.resource.data.eligibleVoterUids is list && request.resource.data.eligibleVoterUids.size() > 0
+        && request.resource.data.recusedDirectorUids is list
+        && meetingCurrent(request.resource.data.meetingId).eligibleVotingDirectorUids.hasAll(request.resource.data.eligibleVoterUids)
+        && meetingCurrent(request.resource.data.meetingId).eligibleVotingDirectorUids.hasAll(request.resource.data.recusedDirectorUids)
+        && !request.resource.data.eligibleVoterUids.hasAny(request.resource.data.recusedDirectorUids)
+        && request.resource.data.quorumSnapshotRequired == meetingCurrent(request.resource.data.meetingId).quorumRequired
+        && request.resource.data.quorumSnapshotPresent >= request.resource.data.quorumSnapshotRequired
+        && getAfter(motionPath(request.resource.data.motionId)).data.voteId == voteId
+        && getAfter(motionPath(request.resource.data.motionId)).data.status == 'voting'
+        && request.resource.data.openedBy == request.auth.uid
+        && request.resource.data.openedAt == request.time && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time && request.resource.data.result == 'pending';
+    }
+    function beginVoteClose() {
+      return hasCapability('votes.close')
+        && resource.data.status == 'open' && request.resource.data.status == 'closing'
+        && meetingCurrent(resource.data.meetingId).status == 'in_session'
+        && meetingCurrent(resource.data.meetingId).activeVoteId == resource.id
+        && request.resource.data.closingBy == request.auth.uid && request.resource.data.closingAt == request.time
+        && request.resource.data.updatedBy == request.auth.uid && request.resource.data.updatedAt == request.time
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','closingBy','closingByName','closingAt','updatedAt','updatedBy']);
+    }
+    function finalizeVote(voteId) {
+      return hasCapability('votes.close')
+        && resource.data.status == 'closing' && request.resource.data.status == 'closed'
+        && meetingCurrent(resource.data.meetingId).status == 'in_session'
+        && meetingAfter(resource.data.meetingId).activeVoteId == null
+        && request.resource.data.approveCount is int && request.resource.data.opposeCount is int
+        && request.resource.data.abstainCount is int && request.resource.data.ballotCount is int
+        && request.resource.data.approveCount >= 0 && request.resource.data.opposeCount >= 0 && request.resource.data.abstainCount >= 0
+        && request.resource.data.ballotCount == request.resource.data.approveCount + request.resource.data.opposeCount + request.resource.data.abstainCount
+        && request.resource.data.ballotCount <= resource.data.eligibleVoterUids.size()
+        && request.resource.data.requiredApproveCount is int && request.resource.data.requiredApproveCount > 0
+        && request.resource.data.result in ['adopted','failed'] && request.resource.data.resolutionId is string
+        && getAfter(resolutionPath(request.resource.data.resolutionId)).data.voteId == voteId
+        && request.resource.data.closedBy == request.auth.uid && request.resource.data.closedAt == request.time
+        && request.resource.data.updatedAt == request.time && request.resource.data.updatedBy == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'status','approveCount','opposeCount','abstainCount','ballotCount','requiredApproveCount','result','resolutionId',
+          'closedBy','closedByName','closedAt','updatedAt','updatedBy'
+        ]);
+    }
+    match /votes/{voteId} {
+      allow get, list: if hasCapability('votes.view');
+      allow create: if validVoteCreate(voteId);
+      allow update: if beginVoteClose() || finalizeVote(voteId);
+      allow delete: if false;
+    }
+
+    function canReadBallot(data) {
+      return founderDirector()
+        || (signedIn() && data.voterUid == request.auth.uid)
+        || hasCapability('votes.close')
+        || (hasCapability('votes.view') && data.ballotVisibility == 'recorded' && voteCurrent(data.voteId).status == 'closed');
+    }
+    function validBallotCreate(ballotIdValue) {
+      return hasCapability('votes.cast')
+        && request.resource.data.voteId is string && request.resource.data.voterUid == request.auth.uid
+        && ballotIdValue == request.resource.data.voteId + '_' + request.auth.uid
+        && voteCurrent(request.resource.data.voteId).status == 'open'
+        && request.auth.uid in voteCurrent(request.resource.data.voteId).eligibleVoterUids
+        && request.resource.data.meetingId == voteCurrent(request.resource.data.voteId).meetingId
+        && presentVotingDirector(request.resource.data.meetingId, request.auth.uid)
+        && request.resource.data.choice in ['approve','oppose','abstain']
+        && request.resource.data.ballotVisibility == voteCurrent(request.resource.data.voteId).ballotVisibility
+        && request.resource.data.submittedAt == request.time;
+    }
+    match /voteBallots/{ballotIdValue} {
+      allow get, list: if canReadBallot(resource.data);
+      allow create: if validBallotCreate(ballotIdValue);
+      allow update, delete: if false;
+    }
+
+    function validRecusalCreate(recusalIdValue) {
+      return hasCapability('votes.push')
+        && request.resource.data.voteId is string && request.resource.data.directorUid is string
+        && recusalIdValue == request.resource.data.voteId + '_' + request.resource.data.directorUid
+        && request.resource.data.directorUid in voteAfter(request.resource.data.voteId).recusedDirectorUids
+        && request.resource.data.meetingId == voteAfter(request.resource.data.voteId).meetingId
+        && request.resource.data.recordedBy == request.auth.uid && request.resource.data.recordedAt == request.time;
+    }
+    match /voteRecusals/{recusalIdValue} {
+      allow get, list: if hasCapability('votes.view');
+      allow create: if validRecusalCreate(recusalIdValue);
+      allow update, delete: if false;
+    }
+
+    // Resolutions and Phase 7 certification
+    function validResolutionCreate(resolutionIdValue) {
+      return hasCapability('votes.close') && hasCapability('resolutions.create')
+        && request.resource.data.resolutionNumber is string
+        && request.resource.data.meetingId is string && request.resource.data.motionId is string && request.resource.data.voteId is string
+        && request.resource.data.status in ['adopted','failed'] && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.createdAt == request.time && request.resource.data.certified == false
+        && voteAfter(request.resource.data.voteId).status == 'closed'
+        && voteAfter(request.resource.data.voteId).resolutionId == resolutionIdValue
+        && voteAfter(request.resource.data.voteId).meetingId == request.resource.data.meetingId
+        && request.resource.data.approveCount == voteAfter(request.resource.data.voteId).approveCount
+        && request.resource.data.opposeCount == voteAfter(request.resource.data.voteId).opposeCount
+        && request.resource.data.abstainCount == voteAfter(request.resource.data.voteId).abstainCount
+        && request.resource.data.ballotCount == voteAfter(request.resource.data.voteId).ballotCount
+        && request.resource.data.requiredApproveCount == voteAfter(request.resource.data.voteId).requiredApproveCount;
+    }
+    function certifyResolution() {
+      return hasCapability('records.certify')
+        && resource.data.certified == false && request.resource.data.certified == true
+        && request.resource.data.recordId == resource.data.meetingId
+        && request.resource.data.certifiedAt == request.time && request.resource.data.certifiedBy == request.auth.uid
+        && getAfter(recordPath(resource.data.meetingId)).data.recordStatus == 'certified'
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['certified','certifiedAt','certifiedBy','certifiedByName','recordId']);
+    }
+    match /resolutions/{resolutionIdValue} {
+      allow get, list: if hasCapability('resolutions.view');
+      allow create: if validResolutionCreate(resolutionIdValue);
+      allow update: if certifyResolution();
+      allow delete: if false;
+    }
+
+    // Minutes
+    function validMinutesCreate(meetingId) {
+      return hasCapability('minutes.edit')
+        && request.resource.data.meetingId == meetingId
+        && meetingCurrent(meetingId).status != 'cancelled'
+        && meetingCurrent(meetingId).recordStatus == 'uncertified'
+        && request.resource.data.status == 'draft'
+        && (request.resource.data.minutesDocumentUrl == null || validGoogleUrl(request.resource.data.minutesDocumentUrl))
+        && request.resource.data.preparedBy == request.auth.uid
+        && request.resource.data.createdAt == request.time && request.resource.data.updatedAt == request.time;
+    }
+    function editMinutesDraft() {
+      return hasCapability('minutes.edit')
+        && resource.data.status == 'draft' && request.resource.data.status == 'draft'
+        && meetingCurrent(resource.data.meetingId).recordStatus == 'uncertified'
+        && request.resource.data.meetingId == resource.data.meetingId
+        && request.resource.data.meetingNumber == resource.data.meetingNumber
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.preparedBy == resource.data.preparedBy
+        && (request.resource.data.minutesDocumentUrl == null || validGoogleUrl(request.resource.data.minutesDocumentUrl))
+        && request.resource.data.updatedAt == request.time && request.resource.data.updatedBy == request.auth.uid;
+    }
+    function minutesReady() {
+      return hasCapability('minutes.certify')
+        && resource.data.status == 'draft' && request.resource.data.status == 'ready'
+        && meetingCurrent(resource.data.meetingId).status == 'adjourned'
+        && meetingCurrent(resource.data.meetingId).recordStatus == 'uncertified'
+        && validGoogleUrl(request.resource.data.minutesDocumentUrl)
+        && request.resource.data.readyAt == request.time && request.resource.data.readyBy == request.auth.uid
+        && request.resource.data.updatedAt == request.time && request.resource.data.updatedBy == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','readyAt','readyBy','readyByName','updatedAt','updatedBy']);
+    }
+    function minutesBackToDraft() {
+      return hasCapability('minutes.edit')
+        && resource.data.status == 'ready' && request.resource.data.status == 'draft'
+        && meetingCurrent(resource.data.meetingId).recordStatus == 'uncertified'
+        && request.resource.data.readyAt == null && request.resource.data.readyBy == null && request.resource.data.readyByName == null
+        && request.resource.data.updatedAt == request.time && request.resource.data.updatedBy == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','readyAt','readyBy','readyByName','updatedAt','updatedBy']);
+    }
+    function certifyMinutes(meetingId) {
+      return hasCapability('records.certify')
+        && resource.data.status == 'ready' && request.resource.data.status == 'certified'
+        && request.resource.data.recordId == meetingId
+        && request.resource.data.certifiedAt == request.time && request.resource.data.certifiedBy == request.auth.uid
+        && getAfter(recordPath(meetingId)).data.recordStatus == 'certified'
+        && request.resource.data.updatedAt == request.time && request.resource.data.updatedBy == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','certifiedAt','certifiedBy','certifiedByName','recordId','updatedAt','updatedBy']);
+    }
+    match /meetingMinutes/{meetingId} {
+      allow get, list: if hasCapability('minutes.view');
+      allow create: if validMinutesCreate(meetingId);
+      allow update: if editMinutesDraft() || minutesReady() || minutesBackToDraft() || certifyMinutes(meetingId);
+      allow delete: if false;
+    }
+
+    // Immutable permanent records
+    function validRecordCreate(meetingId) {
+      return hasCapability('records.certify')
+        && request.resource.data.meetingId == meetingId
+        && request.resource.data.recordStatus == 'certified'
+        && meetingCurrent(meetingId).status == 'adjourned'
+        && meetingCurrent(meetingId).activeVoteId == null
+        && request.resource.data.certifiedAt == request.time && request.resource.data.certifiedBy == request.auth.uid
+        && meetingAfter(meetingId).recordStatus == 'certified'
+        && getAfter(minutesPath(meetingId)).data.status == 'certified';
+    }
+    match /meetingRecords/{meetingId} {
+      allow get, list: if hasCapability('records.view');
+      allow create: if validRecordCreate(meetingId);
+      allow update, delete: if false;
+    }
+
+    function sourceBelongs(entryType, sourceId, meetingId) {
+      return (entryType == 'attendance' && get(/databases/$(database)/documents/meetingAttendance/$(sourceId)).data.meetingId == meetingId)
+        || (entryType == 'agenda' && get(/databases/$(database)/documents/agendaItems/$(sourceId)).data.meetingId == meetingId)
+        || (entryType == 'motion' && get(/databases/$(database)/documents/motions/$(sourceId)).data.meetingId == meetingId)
+        || (entryType == 'vote' && get(/databases/$(database)/documents/votes/$(sourceId)).data.meetingId == meetingId)
+        || (entryType == 'resolution' && get(/databases/$(database)/documents/resolutions/$(sourceId)).data.meetingId == meetingId)
+        || (entryType == 'recusal' && get(/databases/$(database)/documents/voteRecusals/$(sourceId)).data.meetingId == meetingId);
+    }
+    match /meetingRecordEntries/{entryIdValue} {
+      allow get, list: if hasCapability('records.view');
+      allow create: if hasCapability('records.certify')
+        && request.resource.data.meetingId is string
+        && request.resource.data.recordId == request.resource.data.meetingId
+        && request.resource.data.entryType in ['attendance','agenda','motion','vote','resolution','recusal']
+        && request.resource.data.sourceId is string
+        && request.resource.data.data is map
+        && request.resource.data.certifiedAt == request.time && request.resource.data.certifiedBy == request.auth.uid
+        && getAfter(recordPath(request.resource.data.meetingId)).data.recordStatus == 'certified'
+        && sourceBelongs(request.resource.data.entryType, request.resource.data.sourceId, request.resource.data.meetingId);
+      allow update, delete: if false;
+    }
+
+    match /recordEvents/{eventIdValue} {
+      allow get, list: if hasCapability('records.view');
+      allow create: if hasCapability('records.certify')
+        && request.resource.data.type == 'meeting_record_certified'
+        && eventIdValue == request.resource.data.meetingId + '_certified'
+        && request.resource.data.recordId == request.resource.data.meetingId
+        && request.resource.data.actorUid == request.auth.uid
+        && request.resource.data.createdAt == request.time
+        && getAfter(recordPath(request.resource.data.meetingId)).data.recordStatus == 'certified';
+      allow update, delete: if false;
+    }
+
+    match /system/{systemDocument} {
+      allow read, create, update: if founderDirector();
+      allow delete: if false;
+    }
+
+    match /auditEvents/{eventIdValue} {
+      allow get, list: if founderDirector() || hasCapability('audit.view');
+      allow create: if founderDirector() && request.resource.data.actorUid == request.auth.uid;
+      allow update, delete: if false;
+    }
+
+    // Phases 1-7 use direct document reads, plain authorized collection reads,
+    // or one single-field equality / array-contains filter at a time.
+    // No manual/composite Firestore indexes are defined or deployed.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
