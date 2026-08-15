@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>TPP Phase 10 Production QA</title>
+  <style>body{font:16px/1.5 system-ui,sans-serif;max-width:960px;margin:40px auto;padding:0 18px;background:#f8fafc;color:#0f172a}h1{margin-bottom:6px}.note{color:#475569}.test{padding:12px 14px;margin:10px 0;border:1px solid #cbd5e1;border-radius:10px;background:white}.pass{border-left:5px solid #16a34a}.fail{border-left:5px solid #dc2626}code{background:#e2e8f0;padding:2px 5px;border-radius:5px}</style>
+</head>
+<body>
+  <h1>Phase 10 — Production Readiness QA</h1>
+  <p class="note">Non-destructive pure-function checks. This page does not connect to or write to Firebase.</p>
+  <div id="results"></div>
+  <script type="module">
+    import {
+      MANUAL_LAUNCH_ITEMS,
+      evaluateEnvironment,
+      evaluateLaunchGate,
+      evaluateModuleStatus,
+      evaluateSecuritySnapshot,
+      normalizeManualState
+    } from "../js/production-readiness.js";
+
+    const results = document.querySelector("#results");
+    function test(name, condition, detail="") {
+      const row = document.createElement("div");
+      row.className = `test ${condition ? "pass" : "fail"}`;
+      row.innerHTML = `<strong>${condition ? "PASS" : "FAIL"} — ${name}</strong>${detail ? `<div>${detail}</div>` : ""}`;
+      results.append(row);
+    }
+
+    const env = evaluateEnvironment({
+      hostname: "directors.ask4prayers.com",
+      protocol: "https:",
+      projectId: "tpp-direc",
+      cname: "directors.ask4prayers.com",
+      firebaseJson: { firestore: { rules: "firestore.rules" } },
+      indexFilePresent: false,
+      online: true
+    });
+    test("production environment passes", env.every((entry) => entry.status === "pass"), `${env.length} checks evaluated.`);
+
+    const badEnv = evaluateEnvironment({
+      hostname: "example.com",
+      protocol: "http:",
+      projectId: "wrong-project",
+      cname: "example.com",
+      firebaseJson: { firestore: { rules: "firestore.rules", indexes: "firestore.indexes.json" }, hosting: {} },
+      indexFilePresent: true,
+      online: true
+    });
+    test("bad production environment is blocked", badEnv.filter((entry) => entry.critical && entry.status === "fail").length >= 5);
+
+    const modules = evaluateModuleStatus({ phase5: { status: "loaded" }, phase6: { status: "loaded" }, phase10: { status: "loaded" } });
+    test("loaded modules pass", modules[0].status === "pass");
+    const failedModule = evaluateModuleStatus({ phase5: { status: "loaded" }, phase6: { status: "failed" } });
+    test("failed module blocks launch", failedModule[0].status === "fail" && failedModule[0].critical === true);
+
+    const security = evaluateSecuritySnapshot({
+      directors: [
+        { uid: "founder", root: true, systemRole: "founder_director", accountStatus: "active", permissions: [] },
+        { uid: "director", root: false, systemRole: "director", accountStatus: "active", permissions: ["votes.cast"] }
+      ],
+      incidents: [],
+      meetings: [],
+      votes: [],
+      policy: { docType: "portal_security_policy" },
+      lastAccessReview: { docType: "access_review_marker" },
+      freeze: { status: "lifted" }
+    });
+    test("healthy security snapshot has no critical failures", security.every((entry) => !(entry.critical && entry.status === "fail")));
+
+    const wildcardSecurity = evaluateSecuritySnapshot({
+      directors: [
+        { uid: "founder", root: true, systemRole: "founder_director", accountStatus: "active", permissions: [] },
+        { uid: "director", root: false, systemRole: "director", accountStatus: "active", permissions: ["*"] }
+      ],
+      incidents: [{ severity: "critical", status: "open" }],
+      meetings: [],
+      votes: [{ status: "open" }],
+      freeze: { status: "active" }
+    });
+    test("wildcard/freeze/critical incident/open vote block launch", wildcardSecurity.filter((entry) => entry.critical && entry.status === "fail").length >= 4);
+
+    const completed = Object.fromEntries(MANUAL_LAUNCH_ITEMS.map((item) => [item.id, true]));
+    const allPassChecks = [
+      { id: "a", status: "pass", critical: true },
+      { id: "b", status: "pass", critical: false }
+    ];
+    const gate = evaluateLaunchGate(allPassChecks, completed);
+    test("fully completed launch gate becomes ready", gate.ready === true && gate.incompleteManual.length === 0);
+
+    const incomplete = normalizeManualState({});
+    const blocked = evaluateLaunchGate(allPassChecks, incomplete);
+    test("manual checklist incompleteness blocks launch", blocked.ready === false && blocked.incompleteManual.length === MANUAL_LAUNCH_ITEMS.length);
+  </script>
+</body>
+</html>
