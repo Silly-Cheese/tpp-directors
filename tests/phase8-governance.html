@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Phase 8 Governance QA</title>
+  <style>body{font-family:system-ui,sans-serif;max-width:900px;margin:40px auto;padding:0 20px;color:#172033}h1{margin-bottom:.25rem}.test{padding:.75rem 1rem;border:1px solid #d8dee8;border-radius:10px;margin:.55rem 0}.pass{border-color:#9bd4ae;background:#f1fbf4}.fail{border-color:#efa19b;background:#fff3f2}code{background:#f3f5f8;padding:.1rem .3rem;border-radius:5px}</style>
+</head>
+<body>
+  <h1>Phase 8 Governance QA</h1>
+  <p>Non-destructive checks for Phase 8 status formatting and due-date classification. This page does not write to Firebase.</p>
+  <div id="results"></div>
+  <script type="module">
+    import { dueState, governanceStatusLabel } from "../js/governance-ops-data.js";
+    const results = document.querySelector("#results");
+    const tests = [];
+    const add = (name, condition, detail="") => tests.push({name,condition,detail});
+    const dateKey = (offset) => { const d=new Date(); d.setHours(12,0,0,0); d.setDate(d.getDate()+offset); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; };
+
+    add("Humanizes governance states", governanceStatusLabel("renewal_required") === "Renewal Required", governanceStatusLabel("renewal_required"));
+    add("Completed compliance stays completed", dueState(dateKey(-30), "completed") === "completed", dueState(dateKey(-30), "completed"));
+    add("Past due date is overdue", dueState(dateKey(-1), "pending") === "overdue", dueState(dateKey(-1), "pending"));
+    add("Today is due today", dueState(dateKey(0), "pending") === "due_today", dueState(dateKey(0), "pending"));
+    add("Near-term date is due soon", dueState(dateKey(7), "pending") === "due_soon", dueState(dateKey(7), "pending"));
+    add("Distant date is upcoming", dueState(dateKey(45), "pending") === "upcoming", dueState(dateKey(45), "pending"));
+    add("Missing due date is unscheduled", dueState(null, "pending") === "unscheduled", dueState(null, "pending"));
+
+    tests.forEach((test) => {
+      const node=document.createElement("div"); node.className=`test ${test.condition?"pass":"fail"}`;
+      node.innerHTML=`<strong>${test.condition?"PASS":"FAIL"}</strong> — ${test.name}${test.detail?` <code>${test.detail}</code>`:""}`; results.append(node);
+    });
+  </script>
+</body>
+</html>
