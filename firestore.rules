@@ -36,6 +36,15 @@ service cloud.firestore {
     function googleUrl(value) {
       return value is string && value.matches('^https://(docs|drive|sheets|slides)[.]google[.]com/.*$');
     }
+    function optionalGoogleUrl(value) { return value == null || googleUrl(value); }
+
+    function officerMayUpdateDirector() {
+      return cap('officers.manage')
+        && resource.data.root != true
+        && request.resource.data.updatedBy == request.auth.uid
+        && request.resource.data.updatedAt == request.time
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['officerRole','updatedAt','updatedBy']);
+    }
 
     match /directors/{id} {
       allow get: if founder() || (signedIn() && request.auth.uid == id && resource.data.accountStatus in ['awaiting_activation','active','pin_reset_required']);
@@ -61,16 +70,27 @@ service cloud.firestore {
         && request.resource.data.accountStatus == 'active'
         && request.resource.data.updatedBy == request.auth.uid
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['accountStatus','activationCompletedAt','updatedAt','updatedBy'])
-      );
+      ) || officerMayUpdateDirector();
       allow delete: if false;
     }
 
+    function officerMayUpdateDirectory() {
+      return cap('officers.manage')
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['officerRole','updatedAt'])
+        && request.resource.data.updatedAt == request.time;
+    }
     match /boardDirectory/{id} {
       allow get, list: if founder() || (cap('directors.view') && resource.data.directoryVisible == true);
-      allow create, update: if founder()
+      allow create: if founder()
         && request.resource.data.directorNumber is string
         && request.resource.data.fullName is string
         && request.resource.data.boardStatus in ['interim','confirmed','leave_of_absence','former'];
+      allow update: if (
+        founder()
+        && request.resource.data.directorNumber is string
+        && request.resource.data.fullName is string
+        && request.resource.data.boardStatus in ['interim','confirmed','leave_of_absence','former']
+      ) || officerMayUpdateDirectory();
       allow delete: if false;
     }
 
@@ -478,7 +498,7 @@ service cloud.firestore {
       return cap('minutes.edit') && request.resource.data.meetingId == id
         && meeting(id).status != 'cancelled' && meeting(id).recordStatus == 'uncertified'
         && request.resource.data.status == 'draft'
-        && (request.resource.data.minutesDocumentUrl == null || googleUrl(request.resource.data.minutesDocumentUrl))
+        && optionalGoogleUrl(request.resource.data.minutesDocumentUrl)
         && request.resource.data.preparedBy == request.auth.uid
         && request.resource.data.createdAt == request.time && request.resource.data.updatedAt == request.time;
     }
@@ -487,7 +507,7 @@ service cloud.firestore {
         && meeting(resource.data.meetingId).recordStatus == 'uncertified'
         && request.resource.data.meetingId == resource.data.meetingId && request.resource.data.meetingNumber == resource.data.meetingNumber
         && request.resource.data.createdAt == resource.data.createdAt && request.resource.data.preparedBy == resource.data.preparedBy
-        && (request.resource.data.minutesDocumentUrl == null || googleUrl(request.resource.data.minutesDocumentUrl))
+        && optionalGoogleUrl(request.resource.data.minutesDocumentUrl)
         && request.resource.data.updatedAt == request.time && request.resource.data.updatedBy == request.auth.uid
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['meetingTitle','minutesDocumentUrl','openingNotes','discussionSummary','otherBusiness','closingNotes','approvalReference','updatedAt','updatedBy']);
     }
@@ -553,6 +573,223 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
+    // Phase 8: committees
+    function validCommittee(data) {
+      return data.committeeNumber is string
+        && data.name is string
+        && data.purpose is string
+        && data.committeeType in ['standing','ad_hoc','special']
+        && data.status in ['active','inactive','disbanded']
+        && data.memberUids is list && data.memberUids.size() <= 100
+        && (data.chairUid == null || data.chairUid in data.memberUids)
+        && optionalGoogleUrl(data.charterUrl);
+    }
+    match /committees/{id} {
+      allow get, list: if cap('committees.view');
+      allow create: if cap('committees.manage') && validCommittee(request.resource.data)
+        && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedBy == request.auth.uid
+        && request.resource.data.updatedAt == request.time;
+      allow update: if cap('committees.manage') && validCommittee(request.resource.data)
+        && request.resource.data.committeeNumber == resource.data.committeeNumber
+        && request.resource.data.createdBy == resource.data.createdBy
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.updatedBy == request.auth.uid
+        && request.resource.data.updatedAt == request.time;
+      allow delete: if false;
+    }
+
+    // Phase 8: annual COI disclosures and specific conflicts
+    function canReadCoi(data) {
+      return founder() || cap('coi.review') || cap('coi.manage')
+        || (cap('coi.view') && data.directorUid == request.auth.uid);
+    }
+    match /coiDisclosures/{id} {
+      allow get, list: if canReadCoi(resource.data);
+      allow create: if cap('coi.submit')
+        && request.resource.data.directorUid == request.auth.uid
+        && request.resource.data.year is int
+        && request.resource.data.status == 'submitted'
+        && googleUrl(request.resource.data.disclosureUrl)
+        && request.resource.data.submittedAt == request.time
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time
+        && request.resource.data.updatedBy == request.auth.uid;
+      allow update: if (
+        cap('coi.submit')
+        && resource.data.directorUid == request.auth.uid
+        && resource.data.status in ['submitted','renewal_required']
+        && request.resource.data.directorUid == resource.data.directorUid
+        && request.resource.data.year == resource.data.year
+        && request.resource.data.disclosureNumber == resource.data.disclosureNumber
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.status == 'submitted'
+        && googleUrl(request.resource.data.disclosureUrl)
+        && request.resource.data.submittedAt == request.time
+        && request.resource.data.reviewedAt == null
+        && request.resource.data.reviewedBy == null
+        && request.resource.data.updatedAt == request.time
+        && request.resource.data.updatedBy == request.auth.uid
+      ) || (
+        cap('coi.review')
+        && resource.data.status in ['submitted','renewal_required']
+        && request.resource.data.status in ['reviewed','renewal_required']
+        && request.resource.data.directorUid == resource.data.directorUid
+        && request.resource.data.year == resource.data.year
+        && request.resource.data.disclosureNumber == resource.data.disclosureNumber
+        && request.resource.data.disclosureUrl == resource.data.disclosureUrl
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.reviewedAt == request.time
+        && request.resource.data.reviewedBy == request.auth.uid
+        && request.resource.data.updatedAt == request.time
+        && request.resource.data.updatedBy == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','reviewedAt','reviewedBy','reviewedByName','reviewNote','updatedAt','updatedBy'])
+      );
+      allow delete: if false;
+    }
+
+    match /conflictRecords/{id} {
+      allow get, list: if founder() || cap('coi.review') || cap('coi.manage')
+        || (cap('coi.view') && resource.data.directorUid == request.auth.uid);
+      allow create: if (
+          cap('coi.manage')
+          || (cap('coi.submit') && request.resource.data.directorUid == request.auth.uid)
+        )
+        && request.resource.data.conflictNumber is string
+        && request.resource.data.description is string
+        && request.resource.data.action in ['disclosed','recused','not_recused','management_plan']
+        && request.resource.data.status in ['open','managed']
+        && optionalGoogleUrl(request.resource.data.relatedDocumentUrl)
+        && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedBy == request.auth.uid
+        && request.resource.data.updatedAt == request.time;
+      allow update: if cap('coi.manage')
+        && request.resource.data.directorUid == resource.data.directorUid
+        && request.resource.data.conflictNumber == resource.data.conflictNumber
+        && request.resource.data.createdBy == resource.data.createdBy
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.status in ['managed','resolved']
+        && request.resource.data.action in ['disclosed','recused','not_recused','management_plan']
+        && request.resource.data.updatedAt == request.time
+        && request.resource.data.updatedBy == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','action','managementPlan','updatedAt','updatedBy','resolvedAt','resolvedBy']);
+      allow delete: if false;
+    }
+
+    // Phase 8: officer-term history
+    match /officerTerms/{id} {
+      allow get, list: if cap('officers.view');
+      allow create: if cap('officers.manage')
+        && request.resource.data.termNumber is string
+        && request.resource.data.officerTitle is string
+        && request.resource.data.directorUid is string
+        && request.resource.data.status == 'active'
+        && request.resource.data.basis in ['election','appointment','interim','confirmation']
+        && optionalGoogleUrl(request.resource.data.appointmentDocumentUrl)
+        && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedBy == request.auth.uid
+        && request.resource.data.updatedAt == request.time;
+      allow update: if cap('officers.manage')
+        && resource.data.status == 'active'
+        && request.resource.data.status == 'concluded'
+        && request.resource.data.termNumber == resource.data.termNumber
+        && request.resource.data.officerTitle == resource.data.officerTitle
+        && request.resource.data.directorUid == resource.data.directorUid
+        && request.resource.data.createdBy == resource.data.createdBy
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.concludedAt == request.time
+        && request.resource.data.concludedBy == request.auth.uid
+        && request.resource.data.updatedAt == request.time
+        && request.resource.data.updatedBy == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','endDate','concludedAt','concludedBy','updatedAt','updatedBy']);
+      allow delete: if false;
+    }
+
+    // Phase 8: Board tasks
+    function canReadTask(data) {
+      return founder() || cap('tasks.manage')
+        || (cap('tasks.view') && data.ownerUids is list && request.auth.uid in data.ownerUids);
+    }
+    match /boardTasks/{id} {
+      allow get, list: if canReadTask(resource.data);
+      allow create: if cap('tasks.create')
+        && request.resource.data.taskNumber is string
+        && request.resource.data.title is string
+        && request.resource.data.ownerUids is list
+        && request.resource.data.ownerUids.size() > 0 && request.resource.data.ownerUids.size() <= 25
+        && request.resource.data.priority in ['low','normal','high','urgent']
+        && request.resource.data.status == 'open'
+        && optionalGoogleUrl(request.resource.data.relatedDocumentUrl)
+        && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time
+        && request.resource.data.updatedBy == request.auth.uid;
+      allow update: if (
+        cap('tasks.manage')
+        && request.resource.data.taskNumber == resource.data.taskNumber
+        && request.resource.data.createdBy == resource.data.createdBy
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.ownerUids is list
+        && request.resource.data.ownerUids.size() > 0 && request.resource.data.ownerUids.size() <= 25
+        && request.resource.data.priority in ['low','normal','high','urgent']
+        && request.resource.data.status in ['open','in_progress','completed','cancelled']
+        && request.resource.data.updatedAt == request.time
+        && request.resource.data.updatedBy == request.auth.uid
+      ) || (
+        cap('tasks.updateOwn')
+        && resource.data.ownerUids is list && request.auth.uid in resource.data.ownerUids
+        && request.resource.data.status in ['open','in_progress','completed']
+        && request.resource.data.updatedAt == request.time
+        && request.resource.data.updatedBy == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','completionNote','completedAt','updatedAt','updatedBy'])
+      );
+      allow delete: if false;
+    }
+
+    // Phase 8: compliance tracking
+    match /complianceItems/{id} {
+      allow get, list: if cap('compliance.view');
+      allow create: if cap('compliance.manage')
+        && request.resource.data.complianceNumber is string
+        && request.resource.data.title is string
+        && request.resource.data.category in ['corporate','tax','registration','policy','board','financial','program','other']
+        && request.resource.data.status in ['pending','due','completed','waived']
+        && optionalGoogleUrl(request.resource.data.sourceDocumentUrl)
+        && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedBy == request.auth.uid
+        && request.resource.data.updatedAt == request.time;
+      allow update: if cap('compliance.manage')
+        && request.resource.data.complianceNumber == resource.data.complianceNumber
+        && request.resource.data.createdBy == resource.data.createdBy
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.category in ['corporate','tax','registration','policy','board','financial','program','other']
+        && request.resource.data.status in ['pending','due','completed','waived']
+        && optionalGoogleUrl(request.resource.data.sourceDocumentUrl)
+        && request.resource.data.updatedBy == request.auth.uid
+        && request.resource.data.updatedAt == request.time;
+      allow delete: if false;
+    }
+
+    function governanceManager() {
+      return founder() || cap('committees.manage') || cap('coi.review') || cap('coi.manage')
+        || cap('officers.manage') || cap('tasks.manage') || cap('compliance.manage');
+    }
+    match /governanceEvents/{id} {
+      allow get, list: if governanceManager();
+      allow create: if governanceManager()
+        && request.resource.data.actorUid == request.auth.uid
+        && request.resource.data.category in ['committee','coi','officer','task','compliance']
+        && request.resource.data.action is string
+        && request.resource.data.targetType is string
+        && request.resource.data.targetId is string
+        && request.resource.data.createdAt == request.time;
+      allow update, delete: if false;
+    }
+
     match /system/{id} {
       allow read, create, update: if founder();
       allow delete: if false;
@@ -563,7 +800,7 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
-    // Phases 1-7 intentionally define no manual/composite indexes.
+    // Phases 1-8 intentionally define no manual/composite indexes.
     match /{document=**} { allow read, write: if false; }
   }
 }
