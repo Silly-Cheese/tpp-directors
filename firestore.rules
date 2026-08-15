@@ -38,12 +38,14 @@ service cloud.firestore {
     }
     function optionalGoogleUrl(value) { return value == null || googleUrl(value); }
 
-    function officerMayUpdateDirector() {
-      return cap('officers.manage')
-        && resource.data.root != true
-        && request.resource.data.updatedBy == request.auth.uid
+    function officerMayUpdateDirector(id) {
+      return request.resource.data.updatedBy == request.auth.uid
         && request.resource.data.updatedAt == request.time
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['officerRole','updatedAt','updatedBy']);
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['officerRole','updatedAt','updatedBy'])
+        && (
+          (cap('officers.manage') && resource.data.root != true)
+          || (founder() && resource.data.root == true && id == request.auth.uid)
+        );
     }
 
     match /directors/{id} {
@@ -70,7 +72,7 @@ service cloud.firestore {
         && request.resource.data.accountStatus == 'active'
         && request.resource.data.updatedBy == request.auth.uid
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['accountStatus','activationCompletedAt','updatedAt','updatedBy'])
-      ) || officerMayUpdateDirector();
+      ) || officerMayUpdateDirector(id);
       allow delete: if false;
     }
 
@@ -573,7 +575,6 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
-    // Phase 8: committees
     function validCommittee(data) {
       return data.committeeNumber is string
         && data.name is string
@@ -600,7 +601,6 @@ service cloud.firestore {
       allow delete: if false;
     }
 
-    // Phase 8: annual COI disclosures and specific conflicts
     function canReadCoi(data) {
       return founder() || cap('coi.review') || cap('coi.manage')
         || (cap('coi.view') && data.directorUid == request.auth.uid);
@@ -629,6 +629,7 @@ service cloud.firestore {
         && request.resource.data.submittedAt == request.time
         && request.resource.data.reviewedAt == null
         && request.resource.data.reviewedBy == null
+        && request.resource.data.reviewedByName == null
         && request.resource.data.updatedAt == request.time
         && request.resource.data.updatedBy == request.auth.uid
       ) || (
@@ -678,7 +679,6 @@ service cloud.firestore {
       allow delete: if false;
     }
 
-    // Phase 8: officer-term history
     match /officerTerms/{id} {
       allow get, list: if cap('officers.view');
       allow create: if cap('officers.manage')
@@ -708,7 +708,6 @@ service cloud.firestore {
       allow delete: if false;
     }
 
-    // Phase 8: Board tasks
     function canReadTask(data) {
       return founder() || cap('tasks.manage')
         || (cap('tasks.view') && data.ownerUids is list && request.auth.uid in data.ownerUids);
@@ -749,7 +748,6 @@ service cloud.firestore {
       allow delete: if false;
     }
 
-    // Phase 8: compliance tracking
     match /complianceItems/{id} {
       allow get, list: if cap('compliance.view');
       allow create: if cap('compliance.manage')
@@ -778,9 +776,12 @@ service cloud.firestore {
       return founder() || cap('committees.manage') || cap('coi.review') || cap('coi.manage')
         || cap('officers.manage') || cap('tasks.manage') || cap('compliance.manage');
     }
+    function governanceWriter() {
+      return governanceManager() || cap('coi.submit') || cap('tasks.create') || cap('tasks.updateOwn');
+    }
     match /governanceEvents/{id} {
       allow get, list: if governanceManager();
-      allow create: if governanceManager()
+      allow create: if governanceWriter()
         && request.resource.data.actorUid == request.auth.uid
         && request.resource.data.category in ['committee','coi','officer','task','compliance']
         && request.resource.data.action is string
