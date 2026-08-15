@@ -136,6 +136,13 @@ export async function createBoardMeeting(input, profile, directoryEntries = []) 
     invitedDirectorUids: invitees.map((entry) => entry.uid),
     eligibleVotingDirectorUids: eligibleInvitees.map((entry) => entry.uid),
     quorumRequired,
+    activeVoteId: null,
+    recordStatus: "uncertified",
+    recordId: null,
+    minutesId: null,
+    certifiedAt: null,
+    certifiedBy: null,
+    certifiedByName: null,
     createdBy: actorUid,
     createdByName: profile.displayName || profile.fullName || "Director",
     createdAt: serverTimestamp(),
@@ -215,6 +222,10 @@ async function transitionMeeting(meetingId, nextStatus, profile) {
 
   if (!isMeetingTransitionAllowed(meeting.status, nextStatus)) {
     throw new Error(`${meetingStatusLabel(meeting.status)} cannot move directly to ${meetingStatusLabel(nextStatus)}.`);
+  }
+
+  if (meeting.activeVoteId && ["recessed", "adjourned"].includes(nextStatus)) {
+    throw new Error("Close the active Board vote before recessing or adjourning this meeting.");
   }
 
   const patch = {
