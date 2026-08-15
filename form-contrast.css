@@ -1,0 +1,145 @@
+/* High-contrast form controls for The Prayer Project Board Portal.
+   Loaded after the shared brand layer so legacy/light phase styles cannot reduce readability. */
+
+:root{
+  --field-bg:#0d0b09;
+  --field-bg-hover:#12100d;
+  --field-border:rgba(216,195,165,.34);
+  --field-border-hover:rgba(216,195,165,.52);
+  --field-border-focus:#fff0d2;
+  --field-text:#fffaf2;
+  --field-placeholder:#a99f94;
+  --field-disabled:#756d64;
+  --field-ring:rgba(216,195,165,.18);
+}
+
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]),
+textarea,
+select,
+.login-card input,
+.admin-form input:not([type="checkbox"]):not([type="radio"]),
+.admin-form select,
+.admin-form textarea,
+.review-controls textarea,
+.directory-toolbar input,
+.directory-toolbar select,
+.first-run-form input{
+  color-scheme:dark!important;
+  background-color:var(--field-bg)!important;
+  color:var(--field-text)!important;
+  border:1px solid var(--field-border)!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.025)!important;
+  -webkit-text-fill-color:var(--field-text)!important;
+  caret-color:var(--warm2,#fff0d2)!important;
+  opacity:1!important;
+}
+
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):hover,
+textarea:hover,
+select:hover{
+  background-color:var(--field-bg-hover)!important;
+  border-color:var(--field-border-hover)!important;
+}
+
+input::placeholder,
+textarea::placeholder,
+.login-card input::placeholder,
+.admin-form input::placeholder,
+.admin-form textarea::placeholder,
+.first-run-form input::placeholder{
+  color:var(--field-placeholder)!important;
+  -webkit-text-fill-color:var(--field-placeholder)!important;
+  opacity:1!important;
+}
+
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):focus,
+textarea:focus,
+select:focus,
+.login-card input:focus,
+.admin-form input:focus,
+.admin-form select:focus,
+.admin-form textarea:focus,
+.review-controls textarea:focus,
+.directory-toolbar input:focus,
+.directory-toolbar select:focus,
+.first-run-form input:focus{
+  background-color:#100e0b!important;
+  color:var(--field-text)!important;
+  border-color:var(--field-border-focus)!important;
+  box-shadow:0 0 0 4px var(--field-ring),inset 0 1px 0 rgba(255,255,255,.04)!important;
+  outline:none!important;
+}
+
+select{
+  color-scheme:dark!important;
+  cursor:pointer;
+}
+
+select option,
+select optgroup{
+  background:#15120f!important;
+  color:#fffaf2!important;
+  -webkit-text-fill-color:#fffaf2!important;
+}
+
+select option:checked{
+  background:#3b3228!important;
+  color:#fff0d2!important;
+}
+
+input:disabled,
+textarea:disabled,
+select:disabled,
+input[readonly],
+textarea[readonly]{
+  background:#080706!important;
+  color:var(--field-disabled)!important;
+  -webkit-text-fill-color:var(--field-disabled)!important;
+  border-color:rgba(255,255,255,.09)!important;
+  opacity:1!important;
+}
+
+/* Chrome/Edge can otherwise inject a pale autofill surface into the dark theme. */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+textarea:-webkit-autofill,
+select:-webkit-autofill{
+  -webkit-text-fill-color:var(--field-text)!important;
+  caret-color:var(--field-text)!important;
+  -webkit-box-shadow:0 0 0 1000px var(--field-bg) inset!important;
+  box-shadow:0 0 0 1000px var(--field-bg) inset!important;
+  border-color:var(--field-border)!important;
+  transition:background-color 99999s ease-out 0s;
+}
+
+/* Keep native date/time controls visible on the dark surface. */
+input::-webkit-calendar-picker-indicator{
+  filter:invert(88%) sepia(17%) saturate(346%) hue-rotate(345deg) brightness(105%);
+  opacity:.9;
+  cursor:pointer;
+}
+
+/* Labels and field guidance need enough contrast against glass panels. */
+label,
+.login-card label,
+.admin-form label,
+.directory-toolbar label>span,
+.first-run-form label,
+legend{
+  color:#ded5ca!important;
+}
+
+.field-help,
+.field-group small,
+.admin-form small,
+.first-run-form small,
+.hint{
+  color:#aaa095!important;
+}
+
+/* Checkboxes/radios retain native affordances but use the brand accent. */
+input[type="checkbox"],
+input[type="radio"]{
+  accent-color:#d8c3a5;
+}
