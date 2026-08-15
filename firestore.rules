@@ -375,8 +375,11 @@ service cloud.firestore {
     }
 
     function voteCreate(id) {
-      return cap('votes.push') && request.resource.data.meetingId is string
+      return cap('votes.push') && request.resource.data.meetingId is string && request.resource.data.motionId is string && request.resource.data.agendaItemId is string
         && meeting(request.resource.data.meetingId).status == 'in_session' && meetingAfter(request.resource.data.meetingId).activeVoteId == id
+        && get(moPath(request.resource.data.motionId)).data.meetingId == request.resource.data.meetingId
+        && get(moPath(request.resource.data.motionId)).data.agendaItemId == request.resource.data.agendaItemId
+        && getAfter(moPath(request.resource.data.motionId)).data.status == 'voting'
         && request.resource.data.status == 'open' && request.resource.data.ballotVisibility in ['recorded','confidential']
         && request.resource.data.thresholdMode in ['simple_majority_cast','majority_eligible','two_thirds_cast']
         && request.resource.data.eligibleVoterUids is list && request.resource.data.eligibleVoterUids.size() > 0
@@ -447,9 +450,10 @@ service cloud.firestore {
     function resolutionCreate(id) {
       return cap('votes.close') && cap('resolutions.create')
         && request.resource.data.meetingId is string && request.resource.data.voteId is string
-        && request.resource.data.status in ['adopted','failed'] && request.resource.data.createdBy == request.auth.uid
-        && request.resource.data.createdAt == request.time && request.resource.data.certified == false
+        && request.resource.data.status in ['adopted','failed'] && request.resource.data.status == voteAfter(request.resource.data.voteId).result
+        && request.resource.data.createdBy == request.auth.uid && request.resource.data.createdAt == request.time && request.resource.data.certified == false
         && voteAfter(request.resource.data.voteId).status == 'closed' && voteAfter(request.resource.data.voteId).resolutionId == id
+        && voteAfter(request.resource.data.voteId).meetingId == request.resource.data.meetingId
         && request.resource.data.approveCount == voteAfter(request.resource.data.voteId).approveCount
         && request.resource.data.opposeCount == voteAfter(request.resource.data.voteId).opposeCount
         && request.resource.data.abstainCount == voteAfter(request.resource.data.voteId).abstainCount
@@ -525,23 +529,17 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
-    function sourceBelongs(type, sourceId, meetingId) {
-      return (type == 'attendance' && get(/databases/$(database)/documents/meetingAttendance/$(sourceId)).data.meetingId == meetingId)
-        || (type == 'agenda' && get(/databases/$(database)/documents/agendaItems/$(sourceId)).data.meetingId == meetingId)
-        || (type == 'motion' && get(/databases/$(database)/documents/motions/$(sourceId)).data.meetingId == meetingId)
-        || (type == 'vote' && get(/databases/$(database)/documents/votes/$(sourceId)).data.meetingId == meetingId)
-        || (type == 'resolution' && get(/databases/$(database)/documents/resolutions/$(sourceId)).data.meetingId == meetingId)
-        || (type == 'recusal' && get(/databases/$(database)/documents/voteRecusals/$(sourceId)).data.meetingId == meetingId);
-    }
     match /meetingRecordEntries/{id} {
       allow get, list: if cap('records.view');
       allow create: if cap('records.certify')
-        && request.resource.data.meetingId is string && request.resource.data.recordId == request.resource.data.meetingId
+        && request.resource.data.meetingId is string
+        && request.resource.data.recordId == request.resource.data.meetingId
         && request.resource.data.entryType in ['attendance','agenda','motion','vote','resolution','recusal']
-        && request.resource.data.sourceId is string && request.resource.data.data is map
+        && request.resource.data.sourceId is string
+        && id == request.resource.data.meetingId + '_' + request.resource.data.entryType + '_' + request.resource.data.sourceId
+        && request.resource.data.data is map
         && request.resource.data.certifiedAt == request.time && request.resource.data.certifiedBy == request.auth.uid
-        && getAfter(recPath(request.resource.data.meetingId)).data.recordStatus == 'certified'
-        && sourceBelongs(request.resource.data.entryType, request.resource.data.sourceId, request.resource.data.meetingId);
+        && getAfter(recPath(request.resource.data.meetingId)).data.recordStatus == 'certified';
       allow update, delete: if false;
     }
 
@@ -565,7 +563,7 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
-    // No manual/composite indexes are part of this portal architecture.
+    // Phases 1-7 intentionally define no manual/composite indexes.
     match /{document=**} { allow read, write: if false; }
   }
 }
