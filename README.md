@@ -17,92 +17,109 @@ Private governance portal for The Prayer Project Board of Directors.
 
 ### Phase 1 — Foundation: COMPLETE
 
-Phase 1 includes:
+Phase 1 established the static GitHub Pages application, Firebase Web SDK connection, deny-by-default Firestore foundation, protected Founder root model, Google-link-only document policy, and deployment architecture.
 
-- static GitHub Pages application shell;
-- custom-domain `CNAME` and `.nojekyll` configuration;
-- Firebase Web SDK initialization;
-- Authentication and Cloud Firestore only;
-- Firestore deny-by-default security foundation;
-- Firebase CLI configuration for Firestore Security Rules deployment;
-- protected Founder Director root-identity contract;
-- baseline director/account data model;
-- reserved governance collection architecture;
-- Google-link-only Board document policy;
-- deployment and production-verification documentation.
+### Phase 2 — Accounts, PIN Authentication & Permissions: CODE COMPLETE
 
-### Phase 2 — Accounts, PIN Authentication & Permissions: IN PROGRESS
+Implemented:
 
-Implemented so far:
+- Full Name first-step login;
+- SHA-256 normalized-name lookup;
+- random internal Firebase Auth aliases rather than director email addresses;
+- Founder-created Board accounts;
+- isolated provisioning Auth instance so account creation does not replace the Founder session;
+- one-time activation codes;
+- four-digit PIN setup and normal PIN sign-in;
+- no raw PIN storage in Firestore;
+- automatic `DIR-######` allocation;
+- account-state enforcement and live suspension/deactivation handling;
+- permission templates;
+- granular per-director capability assignment;
+- protected Founder root account;
+- self-service PIN change;
+- interrupted-activation recovery path;
+- `pin_reset_required` account flow;
+- Founder preparation of a console-assisted forgotten-PIN recovery package;
+- account creation/access/recovery audit events;
+- browser-run pure-function QA harness;
+- no manual/composite indexes.
 
-- Full Name first-step login flow;
-- SHA-256 normalized-name login lookup;
-- opaque internal Firebase Auth aliases instead of director email addresses;
-- one-time activation-code flow;
-- four-digit director-facing PIN setup/sign-in;
-- PINs are never stored in Firestore;
-- isolated secondary Firebase Auth instance for Founder account provisioning;
-- Founder-created ordinary Board accounts;
-- automatic `DIR-######` allocation using a Firestore counter transaction;
-- permission templates and granular per-director capability assignments;
-- Founder account-status, role, officer-role, and voting-status controls;
-- protected root account excluded from ordinary management;
-- live own-profile monitoring so suspended/deactivated accounts are removed from portal access;
-- Founder Control account-creation and access-management interface;
-- Founder Board account roster;
-- account-creation and account-access audit events;
-- protected root-account Security Rules;
-- no manual/composite indexes; account roster sorting is client-side;
-- detailed one-time Founder bootstrap procedure.
+### Phase 3 — Director Dashboard & Board Directory: CODE COMPLETE
 
-Still to complete in Phase 2:
+Implemented:
 
-- production Firebase/Auth/rules verification after external console setup;
-- test coverage for activation, provisioning rollback, permissions, and account-state handling;
-- final error/recovery UX for interrupted first-time activation;
-- documented administrative recovery workflow for forgotten PINs under the no-backend constraint.
+- operational director dashboard;
+- Board-wide current/confirmed/interim metrics;
+- personal Board profile and term information;
+- visible portal-permission summary;
+- active Board notices on the dashboard;
+- Board-facing `boardDirectory` collection separated from secure account records;
+- searchable director directory;
+- client-side Board-status filters;
+- detailed director profile view;
+- interim / confirmed / leave-of-absence / former Board states;
+- Founder management of Board role, officer role, status, term, voting eligibility, and directory visibility;
+- automatic creation of Board-directory records for new accounts;
+- Founder backfill of missing Phase 2 directory records;
+- Founder Board-account metrics;
+- Founder Board-notice publishing and archiving;
+- `announcements.manage` capability foundation;
+- Phase 3 Firestore Security Rules;
+- all directory and notice filtering/sorting performed client-side with no manual/composite indexes.
 
-## Build approach
+**External production verification is still required** after GitHub Pages, Firebase Authentication, DNS, and Firestore Security Rules are configured/deployed. That is deployment work rather than unfinished Phase 2/3 generation.
 
-This repository is intentionally a static web application. It uses native HTML/CSS/JavaScript modules and the Firebase Web SDK from Google's CDN so it can run directly on GitHub Pages without a server-side build environment.
-
-### Implementation phases
+## Implementation phases
 
 1. **Foundation, Firebase connection, protected app shell, Founder Director bootstrap model — complete**
-2. **Director accounts, first-use PIN activation, login, permissions — in progress**
-3. Director dashboards and Board directory
+2. **Director accounts, first-use PIN activation, login, permissions — code complete**
+3. **Director dashboards and Board directory — code complete**
 4. Google-link document center and Board Inbox
 5. Meetings, activation, live check-in, attendance and quorum
 6. Agenda, motions, resolutions and live voting
 7. Minutes, certifications and permanent Board records
 8. Committees, conflicts, officer management, tasks and compliance
 9. Founder Director administration, audit and security controls
-10. Operational hardening, testing and launch
+10. Operational hardening, production testing and launch
 
 ## Security principles
 
-- Firestore rules are the authorization boundary; UI hiding is never treated as security.
+- Firestore Security Rules are the authorization boundary; hidden UI is not security.
 - The Founder Director account is the protected root governance-administration identity.
 - Other accounts receive granular capabilities assigned by the Founder Director.
-- Completed governance records must not be silently rewritten.
-- PINs must never be stored in Firestore as plaintext.
-- Historical directors remain attached to historical votes and meetings even after login access is disabled.
+- The Board-facing directory is separated from sensitive authentication/account records.
+- PINs and activation codes are never stored in Firestore.
+- Historical directors remain attached to future historical governance records even after portal access is disabled.
 - No bootstrap secret is embedded in the public GitHub Pages client.
-- The public login directory permits only an exact document lookup; collection listing is denied.
+- The public login directory permits only exact document lookup; collection listing is denied.
+- Completed governance records in later phases must not be silently rewritten.
 - No manual/composite Firestore indexes are defined or deployed.
+
+## Firestore collections currently opened by phase
+
+```text
+directors          secure account / authorization records
+loginDirectory     exact pre-auth name lookup
+boardDirectory     Board-facing director profiles
+announcements      Board notices
+system             protected counters/config foundation
+auditEvents        Founder-only immutable administrative audit records
+```
+
+All future governance collections remain deny-by-default until their implementation phase.
 
 ## Project documentation
 
 - `docs/PHASE-1-ARCHITECTURE.md` — production architecture and data-contract foundation
-- `docs/PHASE-2-AUTHENTICATION.md` — Full Name + PIN and Founder account architecture
-- `docs/FOUNDER-BOOTSTRAP.md` — exact protected Founder Director bootstrap procedure
+- `docs/PHASE-2-AUTHENTICATION.md` — Full Name + PIN, account lifecycle, permissions, and recovery
+- `docs/PHASE-3-DIRECTOR-WORKSPACE.md` — Board dashboard, directory, statuses, and notices
+- `docs/FOUNDER-BOOTSTRAP.md` — protected Founder Director bootstrap procedure
 - `docs/DEPLOYMENT.md` — GitHub Pages, DNS, Firebase, rules, and verification steps
+- `tests/phase2-phase3.html` — browser-run pure-function QA harness
 
 ## Local development
 
 Because the project uses JavaScript modules, serve the repository through a local HTTP server rather than opening `index.html` directly from disk.
-
-Example:
 
 ```bash
 python -m http.server 8080
@@ -112,13 +129,15 @@ Then open `http://localhost:8080`.
 
 ## Firestore deployment
 
-The included Firebase configuration targets Security Rules only and intentionally does not deploy manual/composite indexes:
+The Firebase configuration targets Security Rules only and intentionally does not deploy manual/composite indexes:
 
 ```bash
 firebase use tpp-direc
 firebase deploy --only firestore:rules
 ```
 
+There is intentionally no `firestore.indexes.json`.
+
 ## Required external setup
 
-The repository cannot itself enable GitHub Pages, alter DNS, enable the Firebase Authentication provider, deploy Firestore rules into your Firebase project, or create the initial privileged Founder Auth identity. Follow `docs/DEPLOYMENT.md` and `docs/FOUNDER-BOOTSTRAP.md` for those one-time external actions.
+The repository cannot itself enable GitHub Pages, alter DNS, enable the Firebase Authentication provider, deploy Firestore rules into the Firebase project, or create the initial privileged Founder Auth identity. Follow `docs/DEPLOYMENT.md` and `docs/FOUNDER-BOOTSTRAP.md` for those one-time actions.
