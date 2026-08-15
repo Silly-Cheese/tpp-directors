@@ -44,21 +44,22 @@ Implemented so far:
 - isolated secondary Firebase Auth instance for Founder account provisioning;
 - Founder-created ordinary Board accounts;
 - automatic `DIR-######` allocation using a Firestore counter transaction;
-- initial permission templates/capability model;
-- Founder Control account-creation interface;
+- permission templates and granular per-director capability assignments;
+- Founder account-status, role, officer-role, and voting-status controls;
+- protected root account excluded from ordinary management;
+- live own-profile monitoring so suspended/deactivated accounts are removed from portal access;
+- Founder Control account-creation and access-management interface;
 - Founder Board account roster;
-- account-creation audit events;
-- protected root-account rules;
+- account-creation and account-access audit events;
+- protected root-account Security Rules;
 - no manual/composite indexes; account roster sorting is client-side;
 - detailed one-time Founder bootstrap procedure.
 
 Still to complete in Phase 2:
 
-- granular per-director permission editor UI;
-- status/suspension management UI;
-- stronger account-management UX and validation;
 - production Firebase/Auth/rules verification after external console setup;
 - test coverage for activation, provisioning rollback, permissions, and account-state handling;
+- final error/recovery UX for interrupted first-time activation;
 - documented administrative recovery workflow for forgotten PINs under the no-backend constraint.
 
 ## Build approach
