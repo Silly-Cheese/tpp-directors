@@ -1,0 +1,74 @@
+name: Apply protected Founder bootstrap rules
+
+on:
+  push:
+    paths:
+      - .github/workflows/founder-bootstrap-rules.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch-rules:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Patch Firestore rules
+        shell: python
+        run: |
+          from pathlib import Path
+
+          path = Path("firestore.rules")
+          text = path.read_text()
+          uid = "QuctEgPv6laYa98bGaLasSdSERk1"
+          login_key = "1003e917ed8c7dba3019775969f12c8cc751e5cc9e18a011b6719a7efc2d9e76"
+
+          marker = "    function optionalGoogleUrl(value) { return value == null || googleUrl(value); }\n"
+          insert = f'''\n    // One-time Founder bootstrap. This exception is bound to one Firebase Auth UID\n    // and closes permanently as soon as the protected Founder director record exists.\n    function founderBootstrapAuth() {{\n      return signedIn() && request.auth.uid == '{uid}';\n    }}\n    function founderBootstrapOpen() {{\n      return founderBootstrapAuth() && !exists(dPath('{uid}'));\n    }}\n    function founderBootstrapDirector(id) {{\n      return founderBootstrapOpen()\n        && id == '{uid}'\n        && request.resource.data.directorNumber == 'DIR-000001'\n        && request.resource.data.fullName == 'Christopher Shelley'\n        && request.resource.data.normalizedName == 'christopher shelley'\n        && request.resource.data.loginKey == '{login_key}'\n        && request.resource.data.displayName == 'Christopher Shelley'\n        && request.resource.data.boardRole == 'Founder Director'\n        && request.resource.data.boardStatus == 'interim'\n        && request.resource.data.systemRole == 'founder_director'\n        && request.resource.data.root == true\n        && request.resource.data.accountStatus == 'awaiting_activation'\n        && request.resource.data.votingStatus == 'eligible'\n        && request.resource.data.directoryVisible == true\n        && request.resource.data.permissions is list\n        && request.resource.data.permissions.size() == 1\n        && request.resource.data.permissions[0] == '*'\n        && request.resource.data.permissionTemplate == 'founder_root'\n        && request.resource.data.createdBy == 'first_run_bootstrap'\n        && request.resource.data.updatedBy == '{uid}'\n        && request.resource.data.createdAt == request.time\n        && request.resource.data.updatedAt == request.time;\n    }}\n    function founderBootstrapDirectory(id) {{\n      return founderBootstrapOpen()\n        && id == '{uid}'\n        && request.resource.data.directorNumber == 'DIR-000001'\n        && request.resource.data.fullName == 'Christopher Shelley'\n        && request.resource.data.displayName == 'Christopher Shelley'\n        && request.resource.data.boardRole == 'Founder Director'\n        && request.resource.data.boardStatus == 'interim'\n        && request.resource.data.votingStatus == 'eligible'\n        && request.resource.data.directoryVisible == true\n        && request.resource.data.updatedAt == request.time;\n    }}\n    function founderBootstrapLogin(key) {{\n      return founderBootstrapOpen()\n        && key == '{login_key}'\n        && request.resource.data.directorUid == '{uid}'\n        && request.resource.data.authEmail is string\n        && request.resource.data.activationRequired == false\n        && request.resource.data.createdAt == request.time\n        && request.resource.data.updatedAt == request.time;\n    }}\n    function founderBootstrapCounter(id) {{\n      return founderBootstrapOpen()\n        && id == 'counters'\n        && request.resource.data.nextDirectorNumber == 2\n        && request.resource.data.updatedBy == 'first_run_bootstrap'\n        && request.resource.data.updatedAt == request.time;\n    }}\n'''
+          if "function founderBootstrapAuth()" not in text:
+              if marker not in text:
+                  raise SystemExit("Bootstrap insertion marker not found")
+              text = text.replace(marker, marker + insert, 1)
+
+          old_director = """      allow create: if founder()\n        && request.resource.data.root == false\n        && request.resource.data.systemRole == 'director'\n        && request.resource.data.accountStatus == 'awaiting_activation'\n        && request.resource.data.directorNumber is string\n        && request.resource.data.fullName is string\n        && request.resource.data.loginKey is string\n        && request.resource.data.permissions is list;"""
+          new_director = """      allow create: if (founder()\n        && request.resource.data.root == false\n        && request.resource.data.systemRole == 'director'\n        && request.resource.data.accountStatus == 'awaiting_activation'\n        && request.resource.data.directorNumber is string\n        && request.resource.data.fullName is string\n        && request.resource.data.loginKey is string\n        && request.resource.data.permissions is list)\n        || founderBootstrapDirector(id);"""
+          if old_director in text:
+              text = text.replace(old_director, new_director, 1)
+          elif "founderBootstrapDirector(id)" not in text:
+              raise SystemExit("Director create rule marker not found")
+
+          old_directory = """      allow create: if founder()\n        && request.resource.data.directorNumber is string\n        && request.resource.data.fullName is string\n        && request.resource.data.boardStatus in ['interim','confirmed','leave_of_absence','former'];"""
+          new_directory = """      allow create: if (founder()\n        && request.resource.data.directorNumber is string\n        && request.resource.data.fullName is string\n        && request.resource.data.boardStatus in ['interim','confirmed','leave_of_absence','former'])\n        || founderBootstrapDirectory(id);"""
+          if old_directory in text:
+              text = text.replace(old_directory, new_directory, 1)
+          elif "founderBootstrapDirectory(id)" not in text:
+              raise SystemExit("Board directory create rule marker not found")
+
+          old_login = "      allow create: if founder() && request.resource.data.directorUid is string && request.resource.data.authEmail is string && request.resource.data.activationRequired == true;"
+          new_login = "      allow create: if (founder() && request.resource.data.directorUid is string && request.resource.data.authEmail is string && request.resource.data.activationRequired == true) || founderBootstrapLogin(key);"
+          if old_login in text:
+              text = text.replace(old_login, new_login, 1)
+          elif "founderBootstrapLogin(key)" not in text:
+              raise SystemExit("Login directory create rule marker not found")
+
+          old_system = """    match /system/{id} {\n      allow read, create, update: if founder();\n      allow delete: if false;\n    }"""
+          new_system = """    match /system/{id} {\n      allow read, update: if founder();\n      allow create: if founder() || founderBootstrapCounter(id);\n      allow delete: if false;\n    }"""
+          if old_system in text:
+              text = text.replace(old_system, new_system, 1)
+          elif "founderBootstrapCounter(id)" not in text:
+              raise SystemExit("System create rule marker not found")
+
+          path.write_text(text)
+      - name: Commit patched rules
+        run: |
+          if git diff --quiet -- firestore.rules; then
+            echo "Rules already contain the protected Founder bootstrap."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add firestore.rules
+          git commit -m "Allow UID-bound one-time Founder bootstrap"
+          git push origin HEAD:main
