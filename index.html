@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0b1730">
+  <title>Board of Directors | The Prayer Project</title>
+  <meta name="description" content="The Prayer Project Board of Directors governance portal.">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <div class="page-shell">
+    <header class="site-header">
+      <a class="brand" href="./" aria-label="The Prayer Project Board of Directors Portal">
+        <span class="brand-mark" aria-hidden="true">TPP</span>
+        <span>
+          <strong>The Prayer Project</strong>
+          <small>Board of Directors Portal</small>
+        </span>
+      </a>
+      <span class="environment-badge">Governance System</span>
+    </header>
+
+    <main>
+      <section id="signed-out-view" class="login-layout" aria-labelledby="login-title">
+        <div class="login-copy">
+          <p class="eyebrow">BOARD GOVERNANCE</p>
+          <h1 id="login-title">Director access starts here.</h1>
+          <p>This private portal will manage Board meetings, check-in, quorum, voting, resolutions, documents, permissions, and permanent governance records.</p>
+          <div class="status-card">
+            <span class="status-dot" aria-hidden="true"></span>
+            <div>
+              <strong>Phase 1 foundation active</strong>
+              <span>Firebase Authentication and Cloud Firestore are connected. Director PIN activation is added in Phase 2.</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="login-card" aria-label="Director sign in">
+          <div class="card-heading">
+            <p class="eyebrow">DIRECTOR SIGN IN</p>
+            <h2>Board Portal</h2>
+            <p>Use your Board account to continue.</p>
+          </div>
+
+          <form id="login-form" novalidate>
+            <label for="full-name">Full name</label>
+            <input id="full-name" name="fullName" autocomplete="name" placeholder="Enter your full name" required>
+
+            <div id="pin-field" hidden>
+              <label for="pin">4-digit PIN</label>
+              <input id="pin" name="pin" inputmode="numeric" autocomplete="current-password" pattern="[0-9]{4}" maxlength="4" placeholder="••••">
+            </div>
+
+            <button id="continue-button" type="submit">Continue</button>
+            <p id="login-message" class="form-message" role="status"></p>
+          </form>
+
+          <div class="security-note">
+            <strong>Authorized Board access only.</strong>
+            <span>Access and governance actions may be recorded in the portal audit log.</span>
+          </div>
+        </div>
+      </section>
+
+      <section id="signed-in-view" class="portal-view" hidden>
+        <aside class="sidebar">
+          <div class="sidebar-title">
+            <span class="brand-mark small">TPP</span>
+            <div><strong>Board Portal</strong><small id="account-role">Director</small></div>
+          </div>
+          <nav aria-label="Board portal navigation">
+            <button class="nav-item active" type="button">Overview</button>
+            <button class="nav-item" type="button">Meetings</button>
+            <button class="nav-item" type="button">Board Documents</button>
+            <button class="nav-item" type="button">Resolutions</button>
+            <button class="nav-item" type="button">Directors</button>
+            <button class="nav-item founder-only" type="button">Founder Control</button>
+          </nav>
+        </aside>
+        <div class="portal-main">
+          <div class="portal-topbar">
+            <div><p class="eyebrow">BOARD OF DIRECTORS</p><h1>Governance Overview</h1></div>
+            <button id="sign-out-button" class="secondary-button" type="button">Sign out</button>
+          </div>
+          <div class="metric-grid">
+            <article class="metric"><span>Active Meeting</span><strong>None</strong><small>No meeting is currently in session.</small></article>
+            <article class="metric"><span>Pending Votes</span><strong>0</strong><small>No Board actions require your vote.</small></article>
+            <article class="metric"><span>Board Inbox</span><strong>0</strong><small>No documents are awaiting review.</small></article>
+            <article class="metric"><span>Compliance</span><strong>Ready</strong><small>Foundation initialized.</small></article>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <span>© The Prayer Project</span>
+      <span>Directors · Governance · Accountability</span>
+    </footer>
+  </div>
+  <script type="module" src="./js/app.js"></script>
+</body>
+</html>
