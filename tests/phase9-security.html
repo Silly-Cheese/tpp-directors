@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>TPP Directors — Phase 9 QA</title>
+  <style>body{font-family:system-ui,sans-serif;max-width:860px;margin:40px auto;padding:0 20px;color:#111827}h1{margin-bottom:.25rem}.test{padding:.75rem 1rem;border:1px solid #d1d5db;border-radius:10px;margin:.55rem 0}.pass{border-color:#86efac;background:#f0fdf4}.fail{border-color:#fca5a5;background:#fef2f2}code{background:#f3f4f6;padding:.1rem .3rem;border-radius:4px}</style>
+</head>
+<body>
+  <h1>Phase 9 Security QA</h1>
+  <p>Non-destructive checks for audit normalization, sensitive-permission detection, correlation labels, and security posture summaries.</p>
+  <div id="results"></div>
+  <script type="module">
+    import { auditEventIsCorrelated, normalizeAuditEvent, sensitivePermissionsFor, summarizeSecurityPosture } from "../js/admin-security-data.js";
+    const results = document.querySelector("#results");
+    const tests = [];
+    function test(name, fn){try{fn();tests.push([name,true]);}catch(error){tests.push([name,false,error.message]);}}
+    function assert(value,message){if(!value)throw new Error(message);}
+
+    test("Founder root is identified as fully privileged",()=>{
+      const values=sensitivePermissionsFor({root:true,systemRole:"founder_director",permissions:[]});
+      assert(values.length===1 && values[0].includes("Founder Root"),"Founder privilege marker missing");
+    });
+    test("Sensitive capability is detected",()=>{
+      const values=sensitivePermissionsFor({permissions:["documents.view","votes.close"]});
+      assert(values.includes("votes.close") && !values.includes("documents.view"),"Sensitive permission filtering failed");
+    });
+    test("Audit event normalization preserves actor/action/target",()=>{
+      const row=normalizeAuditEvent("governance","evt1",{action:"task.completed",actorUid:"u1",targetType:"boardTask",targetId:"t1",createdAt:{seconds:1}});
+      assert(row.action==="task.completed" && row.targetId==="t1" && row.actorUid==="u1","Audit normalization failed");
+    });
+    test("Governance event with target/actor/time is context-correlated",()=>{
+      const row=normalizeAuditEvent("governance","evt2",{action:"committee.updated",actorUid:"u1",targetId:"c1",createdAt:{seconds:2}});
+      assert(auditEventIsCorrelated(row)===true,"Expected correlated governance event");
+    });
+    test("Incomplete governance event requires context review",()=>{
+      const row=normalizeAuditEvent("governance","evt3",{action:"committee.updated"});
+      assert(auditEventIsCorrelated(row)===false,"Incomplete event should not be marked correlated");
+    });
+    test("Security posture counts active/suspended/privileged/root",()=>{
+      const directors=[
+        {root:true,systemRole:"founder_director",accountStatus:"active"},
+        {accountStatus:"active",permissions:["votes.close"]},
+        {accountStatus:"suspended",permissions:[]},
+        {accountStatus:"awaiting_activation",permissions:[]}
+      ];
+      const summary=summarizeSecurityPosture(directors,[]);
+      assert(summary.active===2 && summary.suspended===1 && summary.pending===1 && summary.rootCount===1 && summary.privileged===2,"Posture summary mismatch");
+    });
+
+    tests.forEach(([name,pass,message])=>{
+      const div=document.createElement("div");div.className=`test ${pass?"pass":"fail"}`;div.innerHTML=`<strong>${pass?"PASS":"FAIL"}</strong> — ${name}${message?`<br><code>${message}</code>`:""}`;results.append(div);
+    });
+  </script>
+</body>
+</html>
