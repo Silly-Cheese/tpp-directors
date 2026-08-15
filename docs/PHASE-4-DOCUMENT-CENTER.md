@@ -52,36 +52,15 @@ updatedAt
 updatedBy
 ```
 
-Document numbers use the format:
-
-```text
-BDOC-YYYY-XXXXXX
-```
-
-The suffix is derived from the Firestore document ID. A counter or composite index is not required.
+Document numbers use `BDOC-YYYY-XXXXXX`, with the suffix derived from the Firestore document ID. No counter is required.
 
 ### `documentEvents/{eventId}`
 
-Append-only lifecycle events for a Board document.
+Append-only lifecycle events such as submitted, revised, resubmitted, under review, returned for revision, agenda ready, approved, rejected, tabled, and archived.
 
-Representative event types include:
-
-- `submitted`
-- `revised`
-- `resubmitted`
-- `under_review`
-- `returned_for_revision`
-- `agenda_ready`
-- `approved`
-- `rejected`
-- `tabled`
-- `archived`
-
-Events are sorted client-side after a single-field `documentId == ...` query.
+Events are read with a single-field `documentId == ...` query and sorted client-side.
 
 ## Categories
-
-Phase 4 supports:
 
 - Governance
 - Policy
@@ -93,39 +72,37 @@ Phase 4 supports:
 - Minutes
 - Other
 
-The category list is metadata only and can be expanded later without introducing file uploads.
-
 ## Access scopes
 
 ### Board of Directors
 
-Accessible to active users with `documents.view`.
+Accessible to active users with `documents.view`, the submitter, document reviewers, and Founder root.
 
 ### Board Officers
 
-Accessible to active users with `documents.view` and a non-null officer role.
+Accessible to active officers with `documents.view`, the submitter, document reviewers, and Founder root.
 
 ### Selected Directors
 
-Accessible only to the listed Firebase Authentication UIDs, the submitting director, document reviewers, and the Founder root account.
+Accessible to the selected Firebase Authentication UIDs, the submitter, document reviewers, and Founder root.
 
 ### Founder Director Only
 
-Accessible to the Founder root account, document reviewers, and the submitting director.
+This scope is literal: it is accessible only to the Founder root account and the submitting director.
 
-The submitting director always retains portal access to their own submission so they can follow review status and complete a requested revision.
+A non-Founder user with `documents.review` does **not** receive Founder-only records in the Board Inbox and cannot review them. Founder root can process those records.
+
+The submitter retains access so they can follow status and complete requested revisions.
 
 ## Review permission
 
 `documents.review` is the Phase 4 review capability.
 
-The Founder root account always has it. The initial Board Secretary and Board Chair templates also include it.
+Founder root implicitly has every capability. The initial Board Secretary and Board Chair templates also include document review.
 
-Reviewers receive the Board Inbox and can process submitted records through the supported lifecycle.
+Non-Founder reviewers receive all non-Founder-only submissions, including Board, Officers, and Selected-Director records. That elevated review access is intentional and enforced by Security Rules.
 
 ## Document lifecycle
-
-The main lifecycle is:
 
 ```text
 SUBMITTED
@@ -136,75 +113,68 @@ SUBMITTED
   -> ARCHIVED
 ```
 
-Some direct transitions are intentionally supported, such as submitting a record directly to Agenda Ready or rejecting a clearly unsuitable submission. Security Rules enforce allowed transitions; the browser UI is not the authorization boundary.
+Some direct transitions are supported, such as moving a submitted item directly to Agenda Ready or rejecting a clearly unsuitable submission.
 
-Archived records cannot be silently reopened.
+Security Rules enforce valid transitions. Archived/rejected records cannot be silently reopened into arbitrary earlier states.
 
 ## Revision model
 
-The document file itself remains in Google Drive. A Phase 4 revision updates the stored Google link/metadata and increments `revisionNumber`.
+The Google file remains in Drive. A portal revision updates the link/metadata and increments `revisionNumber`.
 
-The portal never stores old file bytes. The append-only event history records that a revision or resubmission occurred.
-
-A submitting director may revise a document only while it is:
+A submitter may revise only while the record is:
 
 - `submitted`, or
 - `returned_for_revision`.
 
-Reviewers cannot silently rewrite the submitted title, link, access scope, category, or submitting identity through the review path.
+Reviewers cannot use the review path to rewrite the submitted title, Google link, access scope, category, or submitting identity.
 
 ## Board Inbox
 
-Users with `documents.review` see a Board Inbox containing records in:
+The Board Inbox is derived from reviewer-visible documents in:
 
 - `submitted`
 - `under_review`
 
-The Board Inbox is a review queue, not a separate Firestore collection. It is derived client-side from the reviewer-visible document set.
+It is not a duplicate Firestore collection.
 
-This avoids duplicate source-of-truth records.
+Founder-only submissions are excluded from a non-Founder reviewer's data set.
 
 ## Agenda handoff
 
-Phase 4 supports `agenda_ready` as the handoff state to the meeting system.
+`agenda_ready` is the Phase 4 handoff state to the future meeting system.
 
-`agendaMeetingId` is reserved for Phase 5/6 integration. Phase 4 does not fabricate a meeting ID before the meeting module exists.
+`agendaMeetingId` is reserved for Phase 5/6. Phase 4 does not invent a meeting ID before the meeting module exists.
 
 ## No manual/composite indexes
 
-Phase 4 preserves the project-wide rule that no manual/composite Firestore indexes are created.
+Phase 4 preserves the project-wide no-manual-index rule.
 
-Non-reviewer document access is assembled from separate single-field queries:
+Ordinary document access uses separate single-field queries such as:
 
-- `submittedBy == currentUid`
-- `accessScope == board`
-- `accessScope == officers` when applicable
-- `allowedDirectorUids array-contains currentUid`
+```text
+submittedBy == currentUid
+accessScope == board
+accessScope == officers
+allowedDirectorUids array-contains currentUid
+```
 
-The result sets are merged, deduplicated, filtered, searched, and sorted in the browser.
+A non-Founder reviewer uses separate single-field queries for `board`, `officers`, and `restricted` scopes plus their own submissions. Founder root may read the full collection.
 
-Reviewers/Founder may read the full `documents` collection because Security Rules authorize their role.
+Result sets are merged, deduplicated, filtered, searched, and sorted in the browser.
 
-Document history uses one single-field equality query on `documentId`.
+Document history uses one equality query on `documentId`.
 
 There is intentionally no `firestore.indexes.json`.
 
 ## Phase 3 completion included with Phase 4
 
-Before opening the document collection, Phase 3 was hardened in two areas:
+Phase 3 was hardened before Phase 4 opened:
 
-1. Hidden `boardDirectory` records now require `directoryVisible == true` for ordinary director reads; the client uses a matching single-field query.
-2. Ordinary directors can read only `published` Board notices; archived notices are no longer merely hidden by client-side filtering.
-
-The Founder/authorized notice manager can still inspect archived notice records.
+1. Ordinary `boardDirectory` reads now require `directoryVisible == true`, with a matching single-field query.
+2. Ordinary directors can read only `published` Board notices; archived records are no longer merely hidden by the UI.
 
 ## Phase 5 handoff
 
-Phase 5 can consume Phase 4 records by:
+Phase 5 can consume `agenda_ready` records by attaching them to scheduled/active meetings, writing a meeting association through Phase 5-authorized rules, and displaying the linked Google document inside the live agenda.
 
-- selecting `agenda_ready` documents;
-- attaching them to a scheduled/active meeting;
-- storing the meeting ID in the document record through a Phase 5-authorized workflow;
-- showing linked documents directly inside live meeting agenda items.
-
-No Phase 5 collection is opened by Phase 4 Security Rules.
+No Phase 5 collection is opened by Phase 4.
