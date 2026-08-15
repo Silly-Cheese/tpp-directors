@@ -43,47 +43,76 @@ firebase use tpp-direc
 firebase deploy --only firestore:rules
 ```
 
-### No composite/manual indexes
+### No manual/composite indexes
 
 The project intentionally does not contain `firestore.indexes.json`, and `firebase.json` references only `firestore.rules`.
 
-Do not create manual/composite indexes for portal queries. Account lists are sorted client-side, and future query design must preserve the no-manual-index requirement unless the project requirements are explicitly changed.
+Do not create manual/composite indexes for portal queries. Director, account, and notice lists are read without composite queries and are searched, filtered, and sorted in the browser. Future phases must preserve this architecture unless the project requirements are explicitly changed.
 
 ## 5. Founder Director bootstrap
 
-The root Founder Director identity must exist before the Founder Control Center can create ordinary accounts.
+The root Founder Director identity must exist before Founder Control can create ordinary accounts.
 
 Follow `docs/FOUNDER-BOOTSTRAP.md` exactly. The bootstrap is a one-time Firebase Console operation because putting a root-claim secret in a public GitHub Pages client would be insecure.
 
-After the root Auth user, director profile, login-directory record, and counter are created, the Founder can activate the account through the normal portal and choose the first four-digit PIN.
+The Phase 3 bootstrap model includes a Board-facing `boardDirectory/{FOUNDER_AUTH_UID}` record in addition to the protected `directors/{FOUNDER_AUTH_UID}` record. If that Board-directory mirror is omitted during initial bootstrap, Founder Control can backfill the missing directory record after the Founder account is activated.
 
-## 6. Phase 2 verification
+## 6. Phase 2 account verification
 
-After Pages, DNS, Firebase Authentication, the Firestore rules, and Founder bootstrap are configured, verify:
+After Pages, DNS, Firebase Authentication, Security Rules, and Founder bootstrap are configured, verify:
 
-- `https://directors.ask4prayers.com` loads without Firebase Hosting;
 - the initial sign-in screen asks for full name only;
 - the Founder name resolves to the first-use activation screen;
-- the activation code signs the Founder in and allows PIN creation;
-- a subsequent sign-in uses Full Name + four-digit PIN;
+- the activation code allows PIN creation;
+- subsequent sign-in uses Full Name + four-digit PIN;
 - Founder Control is visible only to the protected root profile;
-- the Founder can create an ordinary director account;
-- creating an ordinary account does not replace the Founder browser session;
-- the one-time activation code is displayed after creation and is not stored in Firestore;
-- an ordinary new director can activate and choose a PIN;
+- the Founder can create an ordinary director account without replacing the Founder browser session;
+- the one-time activation code is displayed after account creation and is not stored in Firestore;
+- a new director can activate and choose a PIN;
+- a signed-in director can change their own PIN;
+- an interrupted activation can use the `I already created my PIN` recovery route;
+- a non-active account is removed from portal access by the live profile listener;
+- `Prepare PIN Recovery` marks an ordinary account for recovery and displays the administrative recovery package;
 - unauthenticated users cannot list `loginDirectory` or `directors`;
-- ordinary directors cannot list all director account records during Phase 2;
-- ordinary users cannot create, promote, delete, or demote root identities;
-- unfinished governance collections remain deny-by-default;
-- no manual/composite Firestore index is requested by Phase 2 workflows.
+- ordinary users cannot create, promote, delete, or demote root identities.
 
-## 7. Products intentionally not used
+For a forgotten-PIN recovery, the Founder must perform the privileged Firebase Authentication password change through an authorized Firebase administrative workflow before giving the generated activation code to the director. The static portal does not pretend to have Admin SDK privileges.
+
+## 7. Phase 3 Board workspace verification
+
+Verify the Board workspace after at least the Founder and one ordinary director exist:
+
+- the overview dashboard displays Board counts and the signed-in director's profile information;
+- `boardDirectory` is readable by directors with `directors.view` without exposing login aliases, login keys, root fields, or permission arrays;
+- the Board directory can search by name, role, officer role, or director number;
+- directory status filters work for current, confirmed, interim, leave-of-absence, and former records;
+- detailed director profiles show only Board-facing governance information;
+- Founder changes to Board role, officer role, Board status, voting status, term dates, and directory visibility update the Board-facing directory;
+- older Phase 2 account records missing a Board-directory mirror are backfilled through Founder Control;
+- Founder Board-account metrics update correctly;
+- the Founder can publish a Board notice;
+- active directors can see published notices on their dashboard;
+- notice priority/expiration filtering is performed client-side;
+- the Founder can archive a notice;
+- no Phase 2 or Phase 3 workflow requests a manual/composite Firestore index.
+
+## 8. Browser QA harness
+
+After serving the repository over HTTP, open:
+
+```text
+/tests/phase2-phase3.html
+```
+
+The harness performs non-destructive browser tests for name normalization, login-key determinism, activation formatting, PIN validation, account-specific PIN backing values, director-number formatting, permission templates, and Board-directory summary calculations. It does not write to Firebase.
+
+## 9. Products intentionally not used
 
 - Firebase Hosting
 - Firebase Storage
 - Cloud Functions for Firebase
-- Firebase Admin SDK in production runtime
+- Firebase Admin SDK in the production runtime
 - file uploads
 - manual/composite Firestore indexes
 
-Board documents in later phases must continue to use Google Docs/Drive/Sheets/Slides links instead of uploads.
+Board documents in Phase 4 and later must continue to use Google Docs/Drive/Sheets/Slides links instead of uploads.
