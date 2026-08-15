@@ -6,11 +6,9 @@ The portal targets `https://directors.ask4prayers.com`, is hosted with GitHub Pa
 
 Repository: `Silly-Cheese/tpp-directors`
 
-Enable Pages from the `main` branch and repository root.
+Enable Pages from the `main` branch and repository root. The repository contains `index.html`, `.nojekyll`, and `CNAME` with `directors.ask4prayers.com`.
 
-The repository contains `index.html`, `.nojekyll`, and `CNAME` with `directors.ask4prayers.com`.
-
-The static page has one primary script entry. `firebase.js` dynamically loads the Phase 5 Meeting Room, Phase 5 polish layer, and Phase 6 live-governance module so no build step is required.
+The static page uses one primary script entry. `firebase.js` dynamically loads the Phase 5 Meeting Room, Phase 6 live-governance tools, and Phase 7 minutes/permanent-record modules without a build step.
 
 ## 2. DNS
 
@@ -24,11 +22,11 @@ In Firebase project `tpp-direc`:
 2. Add `directors.ask4prayers.com` to authorized domains if needed.
 3. Do not enable Firebase Hosting, Storage, Functions, or other Firebase products for this portal.
 
-Directors never enter an email address. Email/password is only the internal backing credential for the Full Name + four-digit PIN experience.
+Directors never enter an email address. Email/password is only the internal Firebase backing credential for the Full Name + four-digit PIN experience.
 
 ## 4. Cloud Firestore
 
-Create/confirm Cloud Firestore and deploy the current rules:
+Create/confirm Cloud Firestore and deploy the current consolidated Phase 1–7 rules:
 
 ```bash
 firebase use tpp-direc
@@ -41,7 +39,7 @@ There is intentionally no `firestore.indexes.json`.
 
 `firebase.json` references only `firestore.rules`.
 
-Do not create manual/composite indexes for the portal. Phases 1–6 use direct reads, authorized plain collection reads, or one single-field equality / `array-contains` query at a time, with browser-side merge/filter/sort where needed.
+Do not create manual/composite indexes for the portal. Phases 1–7 use direct document reads, authorized plain collection reads, or one single-field equality / `array-contains` query at a time, with browser-side merge/filter/sort and aggregation where needed.
 
 ## 5. Founder bootstrap
 
@@ -49,32 +47,11 @@ Follow `docs/FOUNDER-BOOTSTRAP.md` before using Founder Control. The protected F
 
 ## 6. Phase 2 account verification
 
-Verify:
-
-- Full Name is the visible first login identifier;
-- activation-code first use works;
-- four-digit PIN setup works;
-- subsequent Full Name + PIN sign-in works;
-- Founder provisioning does not replace the Founder browser session;
-- ordinary director creation produces `DIR-######` and a one-time activation code;
-- the activation code is not stored in Firestore;
-- self-service PIN change works;
-- interrupted activation recovery works;
-- suspended/inactive users lose portal access;
-- ordinary users cannot create/promote/demote the Founder root identity.
+Verify Full Name first-step login, activation-code use, four-digit PIN setup/subsequent sign-in, Founder provisioning session isolation, `DIR-######` creation, PIN recovery, suspension enforcement, and Founder-root protection.
 
 ## 7. Phase 3 workspace verification
 
-Verify:
-
-- dashboard Board metrics render;
-- Board profile/term/voting data render;
-- Board directory search/status filters work;
-- ordinary directory reads return only `directoryVisible == true` records;
-- hidden directory records cannot be read directly by ordinary directors;
-- only published notices are readable by ordinary directors;
-- archived notices remain available only to authorized managers;
-- no Phase 3 workflow requests a composite index.
+Verify dashboard metrics, Board profile/term/voting data, directory filters, hidden-directory protection, published-only ordinary notice access, notice management, and the absence of composite-index prompts.
 
 ## 8. Phase 4 document verification
 
@@ -84,150 +61,165 @@ Verify:
 - Google Docs / Drive / Sheets / Slides HTTPS links are accepted;
 - non-Google and HTTP links are rejected by both client and rules;
 - Board / Officers / Selected Directors / Founder-only scopes behave correctly;
-- Founder-only submissions are not exposed to non-Founder reviewers;
-- Board Inbox transitions work;
-- Return for Revision and resubmission work;
-- revision number increments;
-- Agenda Ready status works;
-- invalid status jumps are rejected;
-- archived records cannot be silently reopened;
-- each accepted lifecycle mutation reserves a fresh `lastEventId` and creates the matching immutable `documentEvents` record;
-- unrelated/duplicate history events are rejected;
-- Google Drive sharing permissions still govern the underlying file.
+- Board Inbox transitions and revision/resubmission work;
+- Agenda Ready works;
+- invalid lifecycle jumps are rejected;
+- every accepted mutation reserves a fresh `lastEventId` and matching immutable history record;
+- Google Drive permissions still govern the underlying file.
 
 ## 9. Phase 5 meeting verification
 
-Create at least two voting-eligible directors plus accounts with appropriate meeting permissions.
-
-### Module-loading / polish check
-
-Verify on the real GitHub Pages site that:
-
-- clicking **Meetings** opens the live Meeting Room rather than the old placeholder;
-- Phase 5 loads without adding a second HTML script tag;
-- select-all / clear-all invite controls work;
-- selected invite count updates;
-- lifecycle confirmation prompts appear;
-- Firestore rerenders do not create a browser freeze or recursive MutationObserver loop.
-
-### Meeting creation
+Create multiple voting-eligible directors and accounts with appropriate meeting permissions.
 
 Verify:
 
-- `meetings.create` is required;
-- meeting types/modes work;
-- `BM-YYYY-XXXXXX` IDs are generated;
-- invited and voting-eligible rosters are snapshotted;
-- deterministic `meetingAttendance/{meetingId}_{directorUid}` records are created;
-- mismatched/duplicate attendance IDs are rejected;
-- quorum cannot exceed invited voting-eligible directors;
-- leaving quorum blank uses the client majority helper.
-
-### Activation / attendance / quorum
-
-Verify:
-
-- `scheduled -> checkin_open` requires `meetings.activate`;
-- invited directors can self-check in only while allowed;
-- non-invitees cannot create themselves into attendance;
-- Departed directors can return, including during recess;
-- attendance-manager permission is enforced;
-- non-voting present directors do not increase voting quorum;
-- present/departed voting directors immediately change the live quorum calculation;
-- attendance becomes immutable after Adjourned/Cancelled.
-
-### Live meeting control
-
-Verify:
-
-- Call to Order / Recess / Resume / Adjourn require `meetings.control`;
-- pre-session cancellation works;
-- an Adjourned meeting cannot be silently reopened;
-- lifecycle writes cannot rewrite the meeting number, roster snapshots, quorum requirement, or creator fields;
-- the dashboard live-meeting banner updates across devices.
+- Meetings opens the real Meeting Room on GitHub Pages;
+- module loading requires no extra HTML script tag;
+- meeting creation and `BM-YYYY-XXXXXX` numbering work;
+- invited/voting-eligible roster snapshots and deterministic attendance records are created;
+- check-in, Departed/return, Excused/Absent, and live attendance work across devices;
+- non-voting directors do not increase voting quorum;
+- attendance changes update quorum immediately;
+- attendance locks after Adjourned/Cancelled;
+- lifecycle permissions are enforced;
+- an Adjourned meeting cannot be silently reopened.
 
 ## 10. Phase 6 live-governance verification
 
 Use at least two present voting-eligible directors, an agenda manager, and a vote controller.
 
-### Agenda
+### Agenda / motions
+
+Verify Agenda Ready Google documents can be attached, closed agenda items reject new motions, a present voting-eligible director can make a motion, the mover cannot second it, and a different present voting-eligible director can second it.
+
+### Active-vote lock
 
 Verify:
 
-- `agenda.manage` is required to add/manage agenda items;
-- business/report/motion/resolution/election/other types can be created;
-- agenda item ordering is stable client-side;
-- an Agenda Ready Board document can be attached;
-- an attached document receives `agendaMeetingId`;
-- a non-Agenda-Ready document cannot be attached;
-- a document already assigned to another meeting cannot be reassigned;
-- agenda records are locked after Adjourned/Cancelled.
-
-### Motions / seconds
-
-Verify:
-
-- a motion can be made only while the meeting is In Session;
-- the mover must be Present and voting eligible;
-- `motions.create` is required;
-- a new motion begins `pending_second`;
-- the mover cannot second their own motion;
-- a second director must be Present, voting eligible, and have `motions.second`;
-- seconding changes the motion to `ready`;
-- mover/seconder names and UIDs remain snapshotted.
+- a newly created meeting has `activeVoteId: null`;
+- pushing a vote atomically changes `activeVoteId` to that vote ID;
+- attempting to push a second vote for the same meeting is rejected;
+- a meeting with an active vote cannot Recess or Adjourn;
+- another controller cannot bypass the active-vote lock with a direct Firestore write.
 
 ### Vote push / quorum / recusals
 
 Verify:
 
-- `votes.push` is required;
 - only a `ready` motion can be pushed;
-- the client blocks vote push when live Phase 5 quorum is not satisfied;
-- the vote stores the quorum snapshot used to open it;
-- the eligible-voter snapshot contains currently Present voting-eligible directors minus selected recusals;
-- vote recusals create deterministic `voteRecusals/{voteId}_{directorUid}` records;
-- recused directors do not receive an eligible ballot state;
-- Firestore rejects eligible/recusal UIDs outside the meeting's voting-eligible population.
+- the client blocks push when live quorum is absent;
+- frozen eligible voters contain present voting-eligible directors minus recusals;
+- deterministic recusal records are created;
+- recused directors are excluded from the ballot;
+- out-of-population eligible/recusal UIDs are rejected by rules.
 
 ### Ballots
 
-Verify with separate devices/accounts:
+Verify Approve / Oppose / Abstain on separate accounts/devices. Confirm deterministic `{voteId}_{directorUid}` IDs, one immutable ballot per voter, present-status enforcement, frozen voter-list enforcement, recorded-ballot auditing, and confidential-ballot access restrictions.
 
-- `votes.cast` is required;
-- eligible Present directors can vote Approve / Oppose / Abstain;
-- a director cannot cast another director's ballot;
-- the ballot ID is deterministic: `{voteId}_{directorUid}`;
-- a second ballot write for the same voter is rejected;
-- ballot update/delete is rejected;
-- a director marked Departed after vote-open cannot cast until Present again;
-- a director not in the vote's frozen eligible-voter snapshot cannot cast even if later marked Present;
-- recorded ballots become auditable according to the vote-record rules;
-- confidential ballots are readable by the voter, Founder root, and authorized vote closer, but not ordinary Board viewers.
+### Two-stage vote close
 
-### Vote thresholds / close
+Verify:
 
-Verify all three modes with known ballot totals:
+```text
+open -> closing -> closed
+```
 
-- `simple_majority_cast`;
-- `majority_eligible`;
-- `two_thirds_cast`.
+Specifically:
 
-Also verify:
-
-- `votes.close` and `resolutions.create` are required to close through the workflow;
-- closing writes approve/oppose/abstain totals;
-- `ballotCount` equals the three totals;
-- the closed vote result is Adopted or Failed;
-- the motion is closed to the same result state;
+- `votes.close` is required;
+- close-time live quorum is checked by the normal client workflow;
+- moving to `closing` stops additional ballot creation;
+- a ballot write attempted after `closing` begins is rejected;
+- final totals equal Approve + Oppose + Abstain;
+- all three threshold modes calculate expected results;
+- the final transaction clears `meeting.activeVoteId`;
+- the motion becomes Adopted/Failed;
 - the agenda item becomes Completed;
-- a `BR-YYYY-XXXXXX` resolution record is created;
-- the resolution record begins `certified: false` for Phase 7.
+- a preliminary `BR-YYYY-XXXXXX` resolution is created with `certified: false`.
 
-### Serverless quorum boundary
+### Pushed-vote alert
 
-Manually verify that the stored vote quorum snapshot matches the underlying Phase 5 attendance records at the moment the vote was pushed. The client performs the roster-wide quorum aggregation. Firestore Rules independently validate individual ballots against the open vote, eligible-voter snapshot, and the voter's current Present attendance record.
+Verify an eligible director receives the portal-wide **VOTE NOW** alert while on Overview, Documents, Directors, or another portal view, and that it changes to **BALLOT RECORDED** after their deterministic ballot is created.
 
-## 11. Browser QA harnesses
+## 11. Phase 7 minutes & certification verification
+
+Use an Adjourned meeting that contains at least one closed Phase 6 vote/resolution.
+
+### Minutes draft
+
+Verify:
+
+- `minutes.view` controls visibility;
+- `minutes.edit` is required to create/update `meetingMinutes/{meetingId}`;
+- the minutes document itself is a Google link, never an upload;
+- Google Docs / Drive / Sheets / Slides HTTPS links are accepted;
+- unsupported URLs are rejected;
+- structured opening/discussion/other-business/closing notes save correctly;
+- a Cancelled meeting cannot use the ordinary official-minutes workflow;
+- a certified meeting cannot be edited.
+
+### Ready for Certification
+
+Verify:
+
+- `minutes.certify` is required;
+- only an Adjourned meeting can move Draft minutes to Ready;
+- a valid official Google minutes link is required;
+- Ready minutes are read-only in the ordinary editor;
+- an authorized minutes editor can return Ready minutes to Draft before final certification.
+
+### Permanent record certification
+
+Verify `records.certify` separately from minutes editing permissions.
+
+Certification must be rejected when:
+
+- the meeting is not Adjourned;
+- `activeVoteId` remains set;
+- any vote is Open or Closing;
+- minutes are not Ready;
+- the official minutes Google link is invalid/missing;
+- a certified `meetingRecords/{meetingId}` already exists.
+
+For a valid certification, verify one atomic operation produces/updates:
+
+```text
+meetingRecords/{meetingId}
+meetingRecordEntries/*
+meetingMinutes/{meetingId}
+meetings/{meetingId}
+resolutions/* for that meeting
+recordEvents/{meetingId}_certified
+```
+
+Then verify:
+
+- master record number uses `BMR-YYYY-XXXXXX`;
+- meeting remains historically `status: adjourned`;
+- meeting receives `recordStatus: certified` and record/minutes links;
+- minutes become `certified`;
+- preliminary meeting resolutions become `certified: true` and reference the meeting record;
+- record entries preserve attendance, agenda, motion, vote, resolution, and recusal snapshots;
+- confidential individual ballot choices are not copied into the permanent snapshot;
+- original immutable ballots retain their Phase 6 access controls;
+- certified master records cannot be updated/deleted;
+- certified record entries cannot be updated/deleted;
+- certified resolutions cannot be arbitrarily rewritten;
+- the deterministic certification event cannot be rewritten/deleted.
+
+### Board Records UI
+
+Verify:
+
+- **Board Records** is visible only to accounts with `records.view`;
+- certified records appear without a composite-index prompt;
+- search works client-side;
+- official Google minutes open in a new tab;
+- attendance/agenda/motions/votes/resolutions/recusals render under the correct certified meeting;
+- Print Record produces the print-focused certified-record view.
+
+## 12. Browser QA harnesses
 
 Serve the repository locally over HTTP and open:
 
@@ -236,28 +228,30 @@ Serve the repository locally over HTTP and open:
 /tests/phase4-documents.html
 /tests/phase5-meetings.html
 /tests/phase6-governance.html
+/tests/phase7-records.html
 ```
 
-The Phase 6 harness checks threshold math and readable governance status labels without writing to Firebase.
+The harnesses are non-destructive and do not write to Firebase. Phase 7 checks record-summary counting, minutes status labels, the Phase 6 `closing` state, and threshold math used by certified results.
 
-## 12. No-index verification
+## 13. No-index verification
 
-Phase 6 must not prompt for a manual/composite index.
+No Phase 1–7 workflow should request a manual/composite index.
 
-Representative reads remain single-field:
+Representative single-field reads include:
 
 ```text
 meetingAttendance.meetingId == selectedMeetingId
 agendaItems.meetingId == selectedMeetingId
 motions.meetingId == selectedMeetingId
 votes.meetingId == selectedMeetingId
-voteBallots.voteId == selectedVoteId
-voteRecusals.voteId == selectedVoteId
+voteRecusals.meetingId == selectedMeetingId
+resolutions.meetingId == selectedMeetingId
+meetingRecordEntries.meetingId == selectedMeetingId
 ```
 
-Search, sorting, filtering, quorum math, and threshold math occur in the browser.
+Recorded ballots may use deterministic direct document reads. Search, sorting, filtering, quorum math, vote thresholds, and permanent-record summaries occur in the browser.
 
-## 13. Products intentionally not used
+## 14. Products intentionally not used
 
 - Firebase Hosting
 - Firebase Storage
@@ -266,4 +260,4 @@ Search, sorting, filtering, quorum math, and threshold math occur in the browser
 - direct file uploads
 - manual/composite Firestore indexes
 
-Board documents remain Google-hosted links unless the project requirements are explicitly changed.
+Board documents and official minutes remain Google-hosted links unless the project requirements are explicitly changed.
