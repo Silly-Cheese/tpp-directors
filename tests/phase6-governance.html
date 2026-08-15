@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Phase 6 Governance QA</title>
+  <style>
+    body{font-family:system-ui,sans-serif;max-width:900px;margin:40px auto;padding:0 20px;color:#172033}h1{margin-bottom:6px}p{color:#667085}.pass{color:#15704e}.fail{color:#a13f31}li{margin:8px 0}code{background:#f2f4f7;padding:2px 5px;border-radius:5px}
+  </style>
+</head>
+<body>
+  <h1>Phase 6 Governance QA</h1>
+  <p>Non-destructive browser tests for vote-threshold and governance helper logic. This page does not write to Firebase.</p>
+  <ol id="results"></ol>
+  <script type="module">
+    import { calculateVoteResult, thresholdLabel, statusLabel } from "../js/governance-data.js";
+
+    const results=document.querySelector("#results");let failures=0;
+    function test(name,condition,detail=""){const item=document.createElement("li");item.className=condition?"pass":"fail";item.textContent=`${condition?"PASS":"FAIL"} — ${name}${detail?`: ${detail}`:""}`;results.append(item);if(!condition)failures+=1;}
+
+    let r=calculateVoteResult("simple_majority_cast",{approve:3,oppose:2,abstain:1},6);
+    test("simple majority adopts 3-2",r.adopted===true,`required=${r.required}`);
+    test("simple majority required count is 3",r.required===3);
+
+    r=calculateVoteResult("simple_majority_cast",{approve:2,oppose:2,abstain:2},6);
+    test("tie fails simple majority",r.adopted===false);
+
+    r=calculateVoteResult("majority_eligible",{approve:3,oppose:1,abstain:0},6);
+    test("3 approvals fail majority of six eligible",r.adopted===false,`required=${r.required}`);
+    test("majority of six requires four",r.required===4);
+
+    r=calculateVoteResult("majority_eligible",{approve:4,oppose:1,abstain:1},6);
+    test("4 approvals adopt majority of six eligible",r.adopted===true);
+
+    r=calculateVoteResult("two_thirds_cast",{approve:4,oppose:2,abstain:1},7);
+    test("4 of 6 decisive votes satisfies two-thirds",r.adopted===true,`required=${r.required}`);
+    test("two-thirds of six requires four",r.required===4);
+
+    r=calculateVoteResult("two_thirds_cast",{approve:3,oppose:2,abstain:2},7);
+    test("3 of 5 decisive votes fails two-thirds",r.adopted===false,`required=${r.required}`);
+    test("two-thirds of five requires four",r.required===4);
+
+    test("threshold label is human readable",thresholdLabel("majority_eligible")==="Majority of eligible voters");
+    test("status label is human readable",statusLabel("pending_second")==="Pending Second");
+
+    const summary=document.createElement("p");summary.innerHTML=failures===0?'<strong class="pass">All tests passed.</strong>':`<strong class="fail">${failures} test(s) failed.</strong>`;document.body.append(summary);
+  </script>
+</body>
+</html>
