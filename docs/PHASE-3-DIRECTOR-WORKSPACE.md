@@ -1,42 +1,55 @@
 # Phase 3 — Director Dashboard & Board Directory
 
-Phase 3 turns the authenticated shell into a usable Board workspace while preserving the project's static GitHub Pages architecture, Firebase Authentication + Cloud Firestore-only constraint, and no-manual/composite-index rule.
+Phase 3 turns the authenticated shell into a usable Board workspace while preserving the static GitHub Pages architecture, Firebase Authentication + Cloud Firestore-only constraint, and no-manual/composite-index rule.
 
-## Phase 3 capabilities
+**Phase 3 is complete.** Phase 4 subsequently hardened two Phase 3 read paths described below without changing the Phase 3 product model.
 
-### Director dashboard
+## Director dashboard
 
 Every active director receives a governance overview containing:
 
 - current Board-member count;
 - confirmed-director count;
-- interim-director count;
 - the director's portal account status and director number;
 - Board role and officer role;
 - Board confirmation/status state;
 - voting eligibility;
 - Board term dates;
-- the director's currently assigned portal capabilities;
+- currently assigned portal capabilities;
 - active Board notices;
-- self-service PIN change for a recently authenticated account;
-- clear placeholders for the document, meeting, and voting phases that follow.
+- self-service PIN change;
+- integrated recent-document information after Phase 4.
 
-### Board directory
+## Board directory
 
-Directors with `directors.view` can open the Board Directory and:
+Directors with `directors.view` can:
 
 - view current Board members;
 - search by name, role, officer title, or director number;
 - filter by current, confirmed, interim, leave-of-absence, or former status;
 - view director profile cards;
 - open a detailed Board-facing profile;
-- see Board role, officer role, confirmation/status, voting eligibility, and term dates.
+- see Board role, officer role, status, voting eligibility, and term dates.
 
-Filtering and sorting happen in the browser. No composite Firestore indexes are used.
+### Directory visibility is enforced by Firestore
+
+The `directoryVisible` field is not merely a UI preference.
+
+For ordinary directors, Firestore Security Rules permit reads only when:
+
+```text
+directoryVisible == true
+```
+
+The client uses a matching single-field query. This closes the earlier Phase 3 edge case where a hidden profile could have been omitted from the screen while remaining readable through a direct Firestore request.
+
+Founder root access may inspect hidden Board-directory records for administration.
+
+No composite index is needed for `directoryVisible == true`.
 
 ## Sensitive-account separation
 
-The private `directors/{uid}` records contain account-security and authorization fields such as:
+The private `directors/{uid}` records contain account-security/authorization fields such as:
 
 - `loginKey`;
 - permission arrays;
@@ -45,9 +58,9 @@ The private `directors/{uid}` records contain account-security and authorization
 - root status;
 - audit-related metadata.
 
-Those records are not used as the ordinary Board directory.
+Ordinary Board directory access never lists those records.
 
-Phase 3 introduces:
+Phase 3 uses:
 
 ```text
 boardDirectory/{authUid}
@@ -69,24 +82,22 @@ directoryVisible
 updatedAt
 ```
 
-This means ordinary directors can list the Board without receiving authentication aliases, login keys, permission arrays, or sensitive account administration fields.
-
 ## Board statuses
 
-Phase 3 supports these Board-facing statuses:
+Supported Board-facing states:
 
 - `interim`
 - `confirmed`
 - `leave_of_absence`
 - `former`
 
-The initial/default status for newly created directors is `interim`, which matches the planned initial Board-confirmation workflow.
+The initial/default state for newly created directors is `interim`.
 
-Account status and Board status are intentionally separate. For example, a person can be a confirmed director while their portal login is temporarily suspended, or a former director record can remain historically preserved after portal access is disabled.
+Board status and portal account status remain intentionally separate. Historical Board status should not be erased simply because portal access changes.
 
 ## Founder Director administration
 
-Founder Control now manages both the secure account record and the Board-facing directory record.
+Founder Control manages both the secure account record and Board-facing directory mirror.
 
 The Founder can set:
 
@@ -94,27 +105,27 @@ The Founder can set:
 - officer role;
 - Board status;
 - voting eligibility;
-- term start and end dates;
+- term start/end dates;
 - directory visibility;
 - portal account status;
 - individual portal permissions.
 
-New accounts create both `directors/{uid}` and `boardDirectory/{uid}` in the same Firestore transaction.
+New accounts create both `directors/{uid}` and `boardDirectory/{uid}` in the same account-provisioning workflow.
 
-For Phase 2 accounts that existed before the directory was introduced, Founder Control performs a missing-record backfill. The backfill does not create manual indexes and does not alter authentication credentials.
+Older Phase 2 accounts can be backfilled by Founder Control without changing authentication credentials.
 
 ## Board notices
 
-Phase 3 opens the previously reserved `announcements` collection for active Board members.
+Phase 3 uses `announcements` for Board notices.
 
-A Board notice contains:
+Representative fields:
 
 ```text
 title
 body
 priority        // normal | important | urgent
 status          // published | archived
-expiresOn       // optional YYYY-MM-DD
+expiresOn
 publishedAt
 createdAt
 createdBy
@@ -122,53 +133,39 @@ updatedAt
 updatedBy
 ```
 
-Active directors can read published notices. Notice lists are filtered and sorted client-side so no composite index is required.
+### Published-only ordinary read enforcement
 
-Founder Control can publish and archive notices. The capability string `announcements.manage` also exists in the permission model for future delegated administration.
+Ordinary active directors can read only records where:
+
+```text
+status == published
+```
+
+The dashboard uses a matching single-field query and filters expiration client-side.
+
+Authorized notice managers can inspect archived records. This closes the earlier edge case where archived notices were removed from the UI but remained readable by an ordinary direct collection request.
+
+No composite index is needed.
 
 ## Phase 2 completion carried into Phase 3
 
-The Phase 3 generation also closes several Phase 2 implementation gaps:
+Phase 3 also completed:
 
-- self-service PIN change for a signed-in director;
-- a recovery choice for an activation that was interrupted after the PIN credential was already changed;
-- `pin_reset_required` as a first-class account activation state;
-- Founder preparation of a forgotten-PIN recovery package;
-- a documented console-assisted Auth-password step for forgotten PINs under the no-backend constraint;
-- browser-based pure-function QA tests under `tests/`.
+- self-service PIN change;
+- interrupted first-activation recovery;
+- `pin_reset_required` as a first-class account state;
+- Founder forgotten-PIN recovery package preparation;
+- documented Firebase-console-assisted privileged password reset under the no-backend constraint;
+- browser pure-function QA coverage.
 
-The portal still never stores a raw PIN in Firestore.
-
-## Forgotten-PIN limitation
-
-Because this project deliberately has no application server, Cloud Functions, or Admin SDK runtime, a Founder browser cannot securely replace another user's Firebase Authentication password.
-
-The portal can prepare a recovery package containing:
-
-- the internal Firebase Auth alias;
-- a new one-time activation code;
-- the corresponding temporary Firebase Auth backing password.
-
-The Founder must perform the actual privileged Auth-password change through an authorized Firebase administrative workflow. The director receives only the activation code and then chooses a new four-digit PIN in the portal.
+The portal never stores a raw PIN in Firestore.
 
 ## No manual/composite indexes
 
-Phase 3 uses only:
+Phase 3 uses direct reads, plain collection reads where authorized, single-field queries, and browser-side search/filter/sort.
 
-- direct document reads;
-- plain collection reads;
-- client-side search/filter/sort;
-- Firestore batches/transactions for synchronized record updates.
+`firestore.indexes.json` remains absent and `firebase.json` deploys Security Rules only.
 
-`firestore.indexes.json` remains absent. `firebase.json` deploys Security Rules only.
+## Phase 4 handoff
 
-## Phase 3 handoff
-
-Phase 4 can now build the Google-link-only Board Document Center and Board Inbox on top of:
-
-- authenticated director identities;
-- Founder-controlled permissions;
-- Board-facing director profiles;
-- dashboard notices;
-- synchronized Board status/term records;
-- the existing deny-by-default governance security posture.
+Phase 4 builds the Google-link-only Board Document Center on top of the completed Phase 3 identity, directory, notice, and Founder-permission foundations. See `PHASE-4-DOCUMENT-CENTER.md`.
