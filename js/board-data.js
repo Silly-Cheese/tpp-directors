@@ -2,9 +2,11 @@ import {
   collection,
   doc,
   getDocs,
+  query,
   serverTimestamp,
   setDoc,
-  updateDoc
+  updateDoc,
+  where
 } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js";
 import { auth, db } from "./firebase.js";
 import { hasPermission, PERMISSIONS } from "./permissions.js";
@@ -21,6 +23,10 @@ function timestampValue(value) {
 
 function todayKey() {
   return new Date().toISOString().slice(0, 10);
+}
+
+function isFounder(profile) {
+  return profile?.root === true && profile?.systemRole === "founder_director";
 }
 
 export function normalizeBoardStatus(value) {
@@ -51,10 +57,14 @@ export async function listBoardDirectory(profile) {
     throw new Error("Your account does not have Board directory access.");
   }
 
-  const snapshot = await getDocs(collection(db, "boardDirectory"));
+  const directoryRef = collection(db, "boardDirectory");
+  const snapshot = isFounder(profile)
+    ? await getDocs(directoryRef)
+    : await getDocs(query(directoryRef, where("directoryVisible", "==", true)));
+
   return snapshot.docs
     .map((entry) => ({ uid: entry.id, ...entry.data() }))
-    .filter((entry) => entry.directoryVisible !== false)
+    .filter((entry) => isFounder(profile) || entry.directoryVisible !== false)
     .sort((a, b) => String(a.directorNumber ?? "").localeCompare(String(b.directorNumber ?? "")));
 }
 
@@ -69,20 +79,30 @@ export function summarizeBoardDirectory(entries = []) {
   };
 }
 
-export async function listBoardNotices() {
-  const snapshot = await getDocs(collection(db, "announcements"));
-  const today = todayKey();
+function sortNotices(entries) {
   const priorityRank = { urgent: 0, important: 1, normal: 2 };
+  return entries.sort((a, b) => {
+    const priorityDifference = (priorityRank[a.priority] ?? 2) - (priorityRank[b.priority] ?? 2);
+    if (priorityDifference !== 0) return priorityDifference;
+    return timestampValue(b.publishedAt || b.createdAt) - timestampValue(a.publishedAt || a.createdAt);
+  });
+}
 
-  return snapshot.docs
+export async function listBoardNotices() {
+  if (!auth.currentUser) throw new Error("Sign in to view Board notices.");
+  const snapshot = await getDocs(query(collection(db, "announcements"), where("status", "==", "published")));
+  const today = todayKey();
+  return sortNotices(snapshot.docs
     .map((entry) => ({ id: entry.id, ...entry.data() }))
-    .filter((notice) => notice.status === "published")
-    .filter((notice) => !notice.expiresOn || notice.expiresOn >= today)
-    .sort((a, b) => {
-      const priorityDifference = (priorityRank[a.priority] ?? 2) - (priorityRank[b.priority] ?? 2);
-      if (priorityDifference !== 0) return priorityDifference;
-      return timestampValue(b.publishedAt) - timestampValue(a.publishedAt);
-    });
+    .filter((notice) => !notice.expiresOn || notice.expiresOn >= today));
+}
+
+export async function listAllBoardNotices(profile) {
+  if (!auth.currentUser || !hasPermission(profile, PERMISSIONS.ANNOUNCEMENTS_MANAGE)) {
+    throw new Error("Your account is not authorized to manage Board notices.");
+  }
+  const snapshot = await getDocs(collection(db, "announcements"));
+  return sortNotices(snapshot.docs.map((entry) => ({ id: entry.id, ...entry.data() })));
 }
 
 export async function publishBoardNotice(input, profile) {
