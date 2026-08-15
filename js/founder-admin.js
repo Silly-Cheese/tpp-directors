@@ -26,12 +26,14 @@ import { hasPermission, PERMISSIONS, permissionsForTemplate } from "./permission
 const MANAGEABLE_STATUSES = new Set([
   "awaiting_activation",
   "active",
+  "pin_reset_required",
   "locked",
   "suspended",
   "inactive",
   "former_director",
   "archived"
 ]);
+const VALID_PERMISSIONS = new Set(Object.values(PERMISSIONS));
 
 function requireFounderCapability(profile, permission) {
   if (!auth.currentUser || !hasPermission(profile, permission)) {
@@ -181,16 +183,24 @@ export async function updateDirectorAccess(uid, changes, founderProfile) {
   const nextStatus = changes.accountStatus ?? current.accountStatus;
   if (!MANAGEABLE_STATUSES.has(nextStatus)) throw new Error("Invalid account status.");
 
+  const nextVotingStatus = changes.votingStatus ?? current.votingStatus ?? "eligible";
+  if (!["eligible", "ineligible"].includes(nextVotingStatus)) throw new Error("Invalid voting status.");
+
   const patch = {
     accountStatus: nextStatus,
     boardRole: String(changes.boardRole ?? current.boardRole ?? "Director").trim() || "Director",
     officerRole: String(changes.officerRole ?? current.officerRole ?? "").trim() || null,
-    votingStatus: changes.votingStatus === "ineligible" ? "ineligible" : "eligible",
+    votingStatus: nextVotingStatus,
     updatedAt: serverTimestamp(),
     updatedBy: auth.currentUser.uid
   };
 
-  if (changes.permissionTemplate) {
+  if (Array.isArray(changes.permissions)) {
+    requireFounderCapability(founderProfile, PERMISSIONS.PERMISSIONS_MANAGE);
+    const permissions = [...new Set(changes.permissions)].filter((permission) => VALID_PERMISSIONS.has(permission));
+    patch.permissions = permissions;
+    patch.permissionTemplate = "custom";
+  } else if (changes.permissionTemplate) {
     requireFounderCapability(founderProfile, PERMISSIONS.PERMISSIONS_MANAGE);
     patch.permissionTemplate = changes.permissionTemplate;
     patch.permissions = permissionsForTemplate(changes.permissionTemplate);
@@ -208,7 +218,8 @@ export async function updateDirectorAccess(uid, changes, founderProfile) {
     details: {
       accountStatus: patch.accountStatus,
       votingStatus: patch.votingStatus,
-      permissionTemplate: patch.permissionTemplate ?? current.permissionTemplate ?? null
+      permissionTemplate: patch.permissionTemplate ?? current.permissionTemplate ?? null,
+      permissionCount: patch.permissions?.length ?? current.permissions?.length ?? 0
     }
   });
   await batch.commit();
