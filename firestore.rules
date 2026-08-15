@@ -9,6 +9,10 @@ service cloud.firestore {
       return /databases/$(database)/documents/directors/$(uid);
     }
 
+    function documentEventPath(eventId) {
+      return /databases/$(database)/documents/documentEvents/$(eventId);
+    }
+
     function hasDirectorRecord(uid) {
       return signedIn() && exists(directorPath(uid));
     }
@@ -177,6 +181,8 @@ service cloud.firestore {
         && request.resource.data.status == 'submitted'
         && request.resource.data.submittedBy == request.auth.uid
         && request.resource.data.revisionNumber == 1
+        && request.resource.data.lastEventId is string
+        && !exists(documentEventPath(request.resource.data.lastEventId))
         && validDocumentAccess(request.resource.data);
     }
 
@@ -192,11 +198,14 @@ service cloud.firestore {
         && validGoogleDocumentUrl(request.resource.data.documentUrl)
         && request.resource.data.status == 'submitted'
         && request.resource.data.revisionNumber == resource.data.revisionNumber + 1
+        && request.resource.data.lastEventId is string
+        && request.resource.data.lastEventId != resource.data.lastEventId
+        && !exists(documentEventPath(request.resource.data.lastEventId))
         && request.resource.data.updatedBy == request.auth.uid
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
           'title', 'description', 'documentUrl', 'linkType', 'requestedAction',
           'status', 'revisionNumber', 'reviewNote', 'reviewedBy',
-          'reviewedByName', 'reviewedAt', 'updatedAt', 'updatedBy'
+          'reviewedByName', 'reviewedAt', 'lastEventId', 'updatedAt', 'updatedBy'
         ]);
     }
 
@@ -229,10 +238,13 @@ service cloud.firestore {
         && request.resource.data.accessScope == resource.data.accessScope
         && request.resource.data.allowedDirectorUids == resource.data.allowedDirectorUids
         && request.resource.data.category == resource.data.category
+        && request.resource.data.lastEventId is string
+        && request.resource.data.lastEventId != resource.data.lastEventId
+        && !exists(documentEventPath(request.resource.data.lastEventId))
         && request.resource.data.updatedBy == request.auth.uid
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
           'status', 'reviewNote', 'reviewedBy', 'reviewedByName',
-          'reviewedAt', 'archivedAt', 'updatedAt', 'updatedBy'
+          'reviewedAt', 'archivedAt', 'lastEventId', 'updatedAt', 'updatedBy'
         ]);
     }
 
@@ -246,10 +258,13 @@ service cloud.firestore {
         && request.resource.data.accessScope == resource.data.accessScope
         && request.resource.data.allowedDirectorUids == resource.data.allowedDirectorUids
         && request.resource.data.category == resource.data.category
+        && request.resource.data.lastEventId is string
+        && request.resource.data.lastEventId != resource.data.lastEventId
+        && !exists(documentEventPath(request.resource.data.lastEventId))
         && request.resource.data.updatedBy == request.auth.uid
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
           'status', 'reviewNote', 'reviewedBy', 'reviewedByName',
-          'reviewedAt', 'archivedAt', 'updatedAt', 'updatedBy'
+          'reviewedAt', 'archivedAt', 'lastEventId', 'updatedAt', 'updatedBy'
         ]);
     }
 
@@ -270,16 +285,18 @@ service cloud.firestore {
       return getAfter(/databases/$(database)/documents/documents/$(documentId)).data;
     }
 
-    function validSubmittedDocumentEvent() {
-      return request.resource.data.type == 'submitted'
+    function validSubmittedDocumentEvent(eventId) {
+      return eventId == documentAfter(request.resource.data.documentId).lastEventId
+        && request.resource.data.type == 'submitted'
         && documentAfter(request.resource.data.documentId).submittedBy == request.auth.uid
         && documentAfter(request.resource.data.documentId).status == 'submitted'
         && documentAfter(request.resource.data.documentId).revisionNumber == 1
         && request.resource.data.createdAt == documentAfter(request.resource.data.documentId).createdAt;
     }
 
-    function validRevisionDocumentEvent() {
-      return request.resource.data.type in ['revised', 'resubmitted']
+    function validRevisionDocumentEvent(eventId) {
+      return eventId == documentAfter(request.resource.data.documentId).lastEventId
+        && request.resource.data.type in ['revised', 'resubmitted']
         && documentBefore(request.resource.data.documentId).submittedBy == request.auth.uid
         && documentAfter(request.resource.data.documentId).submittedBy == request.auth.uid
         && documentAfter(request.resource.data.documentId).status == 'submitted'
@@ -291,8 +308,9 @@ service cloud.firestore {
         );
     }
 
-    function validReviewDocumentEvent() {
-      return request.resource.data.type in ['under_review', 'returned_for_revision', 'agenda_ready', 'approved', 'rejected', 'tabled', 'archived']
+    function validReviewDocumentEvent(eventId) {
+      return eventId == documentAfter(request.resource.data.documentId).lastEventId
+        && request.resource.data.type in ['under_review', 'returned_for_revision', 'agenda_ready', 'approved', 'rejected', 'tabled', 'archived']
         && documentAfter(request.resource.data.documentId).status == request.resource.data.type
         && documentAfter(request.resource.data.documentId).reviewedBy == request.auth.uid
         && documentBefore(request.resource.data.documentId).status != documentAfter(request.resource.data.documentId).status
@@ -313,9 +331,9 @@ service cloud.firestore {
         && request.resource.data.type is string
         && canReadDocumentData(documentAfter(request.resource.data.documentId))
         && (
-          validSubmittedDocumentEvent()
-          || validRevisionDocumentEvent()
-          || validReviewDocumentEvent()
+          validSubmittedDocumentEvent(eventId)
+          || validRevisionDocumentEvent(eventId)
+          || validReviewDocumentEvent(eventId)
         );
       allow update, delete: if false;
     }
