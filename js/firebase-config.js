@@ -2,8 +2,6 @@ export const firebaseConfig = Object.freeze({
   apiKey: "AIzaSyCNnvsowo030LSM3OkCKcKfWAcw0xu-kOw",
   authDomain: "tpp-direc.firebaseapp.com",
   projectId: "tpp-direc",
-  storageBucket: "tpp-direc.firebasestorage.app",
-  messagingSenderId: "376518680917",
   appId: "1:376518680917:web:b2529aece8a0ee8d024fdc"
 });
 
