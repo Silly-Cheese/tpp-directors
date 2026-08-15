@@ -76,10 +76,7 @@ service cloud.firestore {
         && request.resource.data.accountStatus == 'active'
         && request.resource.data.updatedBy == request.auth.uid
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-          'accountStatus',
-          'activationCompletedAt',
-          'updatedAt',
-          'updatedBy'
+          'accountStatus', 'activationCompletedAt', 'updatedAt', 'updatedBy'
         ]);
     }
 
@@ -91,8 +88,6 @@ service cloud.firestore {
       allow delete: if false;
     }
 
-    // Phase 3: Board-facing profile data is separated from sensitive account data.
-    // Non-Founder list queries must constrain directoryVisible == true.
     match /boardDirectory/{directorId} {
       allow get, list: if founderDirector()
         || (hasCapability('directors.view') && resource.data.directoryVisible == true);
@@ -125,7 +120,6 @@ service cloud.firestore {
       allow delete: if false;
     }
 
-    // Phase 3: ordinary directors may only read currently published notices.
     match /announcements/{noticeId} {
       allow get, list: if hasCapability('announcements.manage')
         || (activeDirector() && resource.data.status == 'published');
@@ -148,15 +142,14 @@ service cloud.firestore {
 
     function canReadDocumentData(data) {
       return founderDirector()
-        || hasCapability('documents.review')
         || (activeDirector() && data.submittedBy == request.auth.uid)
+        || (hasCapability('documents.review') && data.accessScope != 'founder')
         || (
           hasCapability('documents.view')
           && (
             data.accessScope == 'board'
             || (data.accessScope == 'officers' && isOfficer())
             || (data.accessScope == 'restricted' && request.auth.uid in data.allowedDirectorUids)
-            || (data.accessScope == 'founder' && founderDirector())
           )
         );
     }
@@ -218,6 +211,24 @@ service cloud.firestore {
 
     function reviewerMayUpdateDocument() {
       return hasCapability('documents.review')
+        && resource.data.accessScope != 'founder'
+        && validReviewTransition()
+        && request.resource.data.submittedBy == resource.data.submittedBy
+        && request.resource.data.documentNumber == resource.data.documentNumber
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.accessScope == resource.data.accessScope
+        && request.resource.data.allowedDirectorUids == resource.data.allowedDirectorUids
+        && request.resource.data.category == resource.data.category
+        && request.resource.data.updatedBy == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'status', 'reviewNote', 'reviewedBy', 'reviewedByName',
+          'reviewedAt', 'archivedAt', 'updatedAt', 'updatedBy'
+        ]);
+    }
+
+    function founderMayReviewFounderOnlyDocument() {
+      return founderDirector()
+        && resource.data.accessScope == 'founder'
         && validReviewTransition()
         && request.resource.data.submittedBy == resource.data.submittedBy
         && request.resource.data.documentNumber == resource.data.documentNumber
@@ -235,7 +246,9 @@ service cloud.firestore {
     match /documents/{documentId} {
       allow get, list: if canReadDocumentData(resource.data);
       allow create: if validNewDocument();
-      allow update: if submitterMayReviseDocument() || reviewerMayUpdateDocument();
+      allow update: if submitterMayReviseDocument()
+        || reviewerMayUpdateDocument()
+        || founderMayReviewFounderOnlyDocument();
       allow delete: if false;
     }
 
@@ -255,8 +268,6 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
-    // Phase 1-4 queries use direct reads or one equality/array-contains filter.
-    // No manual/composite Firestore indexes are defined or deployed.
     match /system/{systemDocument} {
       allow read, create, update: if founderDirector();
       allow delete: if false;
@@ -269,6 +280,8 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
+    // Phase 1-4 use direct reads or one equality/array-contains filter.
+    // No manual/composite Firestore indexes are defined or deployed.
     match /{document=**} {
       allow read, write: if false;
     }
