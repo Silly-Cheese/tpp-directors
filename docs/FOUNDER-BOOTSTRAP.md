@@ -1,69 +1,178 @@
-# Founder Director Bootstrap Contract
+# Founder Director Bootstrap Procedure
 
-This document defines the one-time bootstrap requirements for the protected Founder Director account. The credential implementation itself is Phase 2 because it must be implemented together with the portal's final Authentication/PIN flow.
+This is the one-time production bootstrap for the protected Founder Director account. It must be performed directly in the Firebase Console for project `tpp-direc` before ordinary Board accounts can be created from the portal.
 
-## Bootstrap goal
+The bootstrap is intentionally not exposed as a public web action. This repository is public and GitHub Pages is a static client, so a browser-accessible root-claim secret would not be an acceptable security boundary.
 
-The first operational identity in the portal is the Founder Director. It is not created by another portal user and is not promoted from an ordinary director account.
+## Founder identity
 
-After bootstrap, all ordinary Board accounts are created or authorized through Founder-controlled administration.
-
-## Required Founder profile
-
-The Firebase Authentication UID for the Founder account must be used as the Firestore document ID:
-
-`directors/{FOUNDER_AUTH_UID}`
-
-The initial Firestore profile must include at least:
+The protected initial identity is:
 
 ```text
-fullName: "Christopher Shelley"
-displayName: "Christopher Shelley"
-normalizedName: "christopher shelley"
+Full name: Christopher Shelley
+Normalized name: christopher shelley
+Director number: DIR-000001
+Board role: Founder Director
+System role: founder_director
+Root: true
+Permissions: ["*"]
+```
+
+The SHA-256 login key for the normalized full name `christopher shelley` is:
+
+```text
+1003e917ed8c7dba3019775969f12c8cc751e5cc9e18a011b6719a7efc2d9e76
+```
+
+## Before bootstrap
+
+1. Enable Firebase Authentication **Email/Password** in project `tpp-direc`.
+2. Create/confirm Cloud Firestore.
+3. Deploy `firestore.rules`.
+4. Keep the activation code and internal Auth alias private. Do not commit them to GitHub or place them in Firestore.
+
+## Step 1 — Choose the one-time Founder activation credential
+
+Privately choose a random 12-character activation code using uppercase letters/numbers, preferably avoiding ambiguous characters. It can be grouped for human use as:
+
+```text
+XXXX-XXXX-XXXX
+```
+
+The Firebase Authentication temporary password must be:
+
+```text
+TPP-ACT-XXXXXXXXXXXX
+```
+
+where the dashes are removed from the activation code.
+
+Example formatting only:
+
+```text
+Portal activation code: ABCD-EFGH-JK23
+Firebase temporary password: TPP-ACT-ABCDEFGHJK23
+```
+
+Do not use that example as the real credential.
+
+## Step 2 — Create the Founder Firebase Authentication user
+
+In Firebase Console > Authentication > Users:
+
+1. Add a password user.
+2. Use a random non-deliverable internal alias, for example the format:
+   `founder-<long-random-token>@tpp-directors.invalid`
+3. Use the temporary activation password from Step 1.
+4. Create the user.
+5. Copy the Firebase Authentication UID exactly.
+
+The alias is an internal Firebase credential identifier. It is not Christopher Shelley's email address and will never be entered on the Board Portal login screen.
+
+## Step 3 — Create the protected Founder director document
+
+In Cloud Firestore create:
+
+```text
+directors/{FOUNDER_AUTH_UID}
+```
+
+with these fields:
+
+```text
 directorNumber: "DIR-000001"
+fullName: "Christopher Shelley"
+normalizedName: "christopher shelley"
+loginKey: "1003e917ed8c7dba3019775969f12c8cc751e5cc9e18a011b6719a7efc2d9e76"
+displayName: "Christopher Shelley"
 boardRole: "Founder Director"
 officerRole: null
 systemRole: "founder_director"
 root: true
-accountStatus: "active"
+accountStatus: "awaiting_activation"
 votingStatus: "eligible"
+termStart: null
+termEnd: null
 permissions: ["*"]
+permissionTemplate: "founder_root"
+activationCompletedAt: null
+createdAt: <timestamp>
 createdBy: "bootstrap"
+updatedAt: <timestamp>
 updatedBy: "bootstrap"
 ```
 
-`createdAt` and `updatedAt` should be server timestamps when the record is initialized.
+Use the Firebase Authentication UID as the Firestore document ID. Do not use `DIR-000001` as the document ID.
 
-## Invariants
+## Step 4 — Create the Founder login-directory record
 
-Later security rules and administrative screens must enforce these rules:
+Create:
 
-1. There is only one active `root: true` Founder Director identity unless the governance architecture is intentionally redesigned.
-2. An ordinary director cannot grant themselves `root` or `systemRole: "founder_director"`.
-3. The Founder account cannot be deleted through the normal director-account UI.
-4. The Founder account cannot be suspended, archived, or demoted through the normal director-account UI.
-5. Permission assignment cannot remove the root account's system-management capability.
-6. Any exceptional root-account maintenance must be explicit and auditable.
-7. Firebase Authentication UID, not name, is the authorization identity.
+```text
+loginDirectory/1003e917ed8c7dba3019775969f12c8cc751e5cc9e18a011b6719a7efc2d9e76
+```
 
-## Why the account is not created in Phase 1 client code
+with:
 
-The repository is public and hosted as a static GitHub Pages application. A secret bootstrap credential embedded in client JavaScript would not be secret. Phase 1 therefore establishes the protected identity model without shipping an insecure public bootstrap endpoint.
+```text
+directorUid: "{FOUNDER_AUTH_UID}"
+authEmail: "{THE_RANDOM_INTERNAL_ALIAS_FROM_STEP_2}"
+activationRequired: true
+createdAt: <timestamp>
+updatedAt: <timestamp>
+```
 
-Phase 2 must implement the actual Authentication and PIN architecture before the Founder credential is created for production use.
+Do not put the activation code or the four-digit PIN in this document.
 
-## Phase 2 handoff
+## Step 5 — Initialize the director-number counter
 
-Phase 2 is responsible for:
+Create:
 
-- selecting and implementing the Firebase Authentication backing credential for the Full Name + PIN experience;
-- establishing the Founder Authentication identity;
-- writing the protected Founder profile;
-- Founder-created ordinary accounts;
-- first-use account activation;
-- PIN setup/reset;
-- lockout/rate-limit behavior available within the chosen architecture;
-- granular permission storage and enforcement;
-- session handling and account-status enforcement.
+```text
+system/counters
+```
 
-No design should store a director's raw PIN in Firestore.
+with:
+
+```text
+nextDirectorNumber: 2
+updatedAt: <timestamp>
+updatedBy: "bootstrap"
+```
+
+The Founder is `DIR-000001`, so the first account created from Founder Control will receive `DIR-000002`.
+
+## Step 6 — Activate through the normal portal
+
+At `https://directors.ask4prayers.com`:
+
+1. Enter `Christopher Shelley`.
+2. Enter the private one-time activation code from Step 1.
+3. Choose and confirm the Founder four-digit PIN.
+4. The portal changes the Firebase Auth backing credential and marks the Founder profile `active`.
+5. The portal marks the login-directory record `activationRequired: false`.
+6. Founder Control becomes available.
+
+From that point forward the normal Founder sign-in experience is:
+
+```text
+Christopher Shelley
+→ four-digit PIN
+→ Founder Director Control Center
+```
+
+## Root invariants
+
+The portal and Security Rules preserve the following design:
+
+1. Ordinary account creation cannot create `root: true`.
+2. Ordinary account creation cannot assign `systemRole: "founder_director"`.
+3. The normal account-management path cannot delete the root account.
+4. The normal account-management path cannot suspend, archive, demote, or overwrite the root account.
+5. Root authorization is based on the authenticated Firebase UID and protected Firestore profile, never on a typed name alone.
+6. The Founder root account has the wildcard permission `*`.
+7. Any future exceptional root-maintenance workflow must be explicit and auditable.
+
+## Important limitation
+
+Because the project intentionally has no application server, Cloud Functions, or Admin SDK runtime, the portal cannot safely replace another user's Firebase Auth password from the Founder browser. Forgotten-PIN recovery therefore requires a Firebase administrative action unless the architecture is later changed to allow a secure backend.
