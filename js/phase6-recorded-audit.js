@@ -1,9 +1,8 @@
 import {
   collection,
-  getDocs,
-  onSnapshot,
-  query,
-  where
+  doc,
+  getDoc,
+  onSnapshot
 } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js";
 import { auth, db } from "./firebase.js";
@@ -48,9 +47,12 @@ async function correctCard(card) {
   }
 
   try {
-    const snapshot = await getDocs(query(collection(db, "voteBallots"), where("voteId", "==", vote.id)));
-    const ballots = snapshot.docs
-      .map((entry) => ({ id: entry.id, ...entry.data() }))
+    const ballotReads = (Array.isArray(vote.eligibleVoterUids) ? vote.eligibleVoterUids : [])
+      .map((uid) => getDoc(doc(db, "voteBallots", `${vote.id}_${uid}`)));
+    const snapshots = await Promise.all(ballotReads);
+    const ballots = snapshots
+      .filter((snapshot) => snapshot.exists())
+      .map((snapshot) => ({ id: snapshot.id, ...snapshot.data() }))
       .sort((a, b) => String(a.voterName || "").localeCompare(String(b.voterName || "")));
     audit.innerHTML = ballots.length
       ? ballots.map((entry) => `<span>${escapeHtml(entry.voterName || "Director")} — <strong>${escapeHtml(humanize(entry.choice))}</strong></span>`).join("")
@@ -95,7 +97,6 @@ function startObserver() {
 }
 
 async function loadProfile(uid) {
-  const { doc, getDoc } = await import("https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js");
   const snapshot = await getDoc(doc(db, "directors", uid));
   return snapshot.exists() ? { uid: snapshot.id, ...snapshot.data() } : null;
 }
