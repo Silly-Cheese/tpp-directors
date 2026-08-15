@@ -41,30 +41,11 @@ Live agendas, motions/seconds, vote-level recusals, pushed approve/oppose/abstai
 
 ### Phase 7 — Minutes, Certification & Permanent Board Records: FINISHED / CODE COMPLETE
 
-Implemented and hardened:
+Google-linked official minutes, structured minutes metadata, `draft -> ready -> certified` workflow, immutable certified meeting records/snapshots, resolution certification, meeting record seals, certification preflight, searchable/print-friendly Board Records, and no composite indexes.
 
-- Google-linked official minutes;
-- structured minutes metadata;
-- `draft -> ready -> certified` lifecycle;
-- separate minutes and record-certification permissions;
-- return-to-draft correction before certification;
-- deterministic `meetingMinutes/{meetingId}` records;
-- immutable `meetingRecords/{meetingId}` master records;
-- `BMR-YYYY-XXXXXX` permanent record numbers;
-- immutable attendance/agenda/motion/vote/resolution/recusal snapshots;
-- confidential ballot choices excluded from permanent snapshots;
-- resolution certification in the same record-sealing batch;
-- meeting-level record seal without rewriting historical `adjourned` status;
-- immutable certification event;
-- searchable/print-friendly **Board Records** section;
-- certification preflight that blocks active agenda business, voting motions, unfinished votes, or an occupied active-vote lock;
-- explicit warning before sealing a record that still contains unresolved `pending_second` or `ready` motions;
-- Phase 7 QA harness;
-- no manual/composite indexes.
+### Phase 8 — Governance Operations Suite: FINISHED / CODE COMPLETE
 
-### Phase 8 — Governance Operations Suite: CODE COMPLETE
-
-Implemented:
+Implemented and reviewed:
 
 - unified **Governance** portal section;
 - standing / ad hoc / special committee management;
@@ -75,15 +56,38 @@ Implemented:
 - private ordinary-director COI visibility with reviewer/Founder Board-wide access;
 - historical officer-term records with election / appointment / interim / confirmation basis;
 - protected officer-role synchronization to the director account and Board directory;
+- delegated officer managers limited to officer-role metadata on ordinary accounts;
 - Founder-root protection during officer changes;
 - Board task creation, assignment, due dates, priorities, committee/meeting/resolution links, and self-service completion updates;
 - compliance items with categories, due dates, recurrence, ownership, Google-source links, and completed/waived states;
 - derived Overdue / Due Today / Due Soon / Upcoming display states without scheduled backend jobs;
 - append-only Phase 8 governance events;
+- live Phase 8 permission/tab refresh when Founder access changes;
 - Phase 8 granular permissions and updated role templates;
 - Phase 8 Firestore Security Rules;
 - Phase 8 browser QA harness;
 - no manual/composite indexes.
+
+### Phase 9 — Founder Administration, Audit & Security: CODE COMPLETE
+
+Implemented:
+
+- dedicated **Security & Audit Center**;
+- Founder-only security overview and privilege exposure analysis;
+- delegated `audit.view` read-only administrative audit access;
+- consolidated Founder audit view across administrative, document, governance, and permanent-record event streams;
+- browser-side audit search/filtering without composite indexes;
+- explicit context-correlation labels for browser-originated document/governance events rather than falsely representing them as server-signed logs;
+- sensitive-permission access matrix;
+- non-Founder wildcard permission warning;
+- formal access-review audit snapshots;
+- Founder security-policy record under `system/portalSecurityPolicy`;
+- Founder-only security incident register with severity/status/response notes;
+- real emergency access freeze that changes all affected non-Founder accounts to `suspended` while preserving the protected Founder root;
+- emergency restore that returns still-frozen accounts to their prior recorded account state;
+- audit events for emergency freeze, restore, security policy changes, incidents, and formal access reviews;
+- Phase 9 browser QA harness;
+- no new Firebase products and no manual/composite indexes.
 
 **External production verification is still required** after GitHub Pages, Firebase Authentication, DNS, Founder bootstrap, and the current Firestore Security Rules are configured/deployed. That is deployment work rather than unfinished generation.
 
@@ -96,8 +100,8 @@ Implemented:
 5. **Meetings, activation, live check-in, attendance and quorum — polished / code complete**
 6. **Agenda, motions, resolutions and live voting — finished / code complete**
 7. **Minutes, certifications and permanent Board records — finished / code complete**
-8. **Committees, conflicts, officer management, tasks and compliance — code complete**
-9. Founder Director administration, consolidated audit and security controls
+8. **Committees, conflicts, officer management, tasks and compliance — finished / code complete**
+9. **Founder administration, consolidated audit and security controls — code complete**
 10. Operational hardening, production testing and launch
 
 ## Security principles
@@ -120,6 +124,10 @@ Implemented:
 - `officers.manage` can change only current officer-role metadata on ordinary director accounts; it cannot change root/system role, login identity, Board status, voting eligibility, or general permissions.
 - Delegated officer managers cannot modify the Founder root account. Founder-root officer changes require the authenticated Founder.
 - Assigned directors may update their own task progress without silently changing ownership or task authority.
+- Phase 9 emergency freeze uses the existing account-status enforcement path; it is not a visual-only maintenance switch.
+- The Founder root is excluded from emergency account freeze operations.
+- Pre-authentication failed-PIN telemetry is not represented as authoritative because this no-backend architecture cannot securely accept unauthenticated security-log writes without spoofing risk.
+- Browser-originated operational events are presented as contextual audit history, not cryptographically server-signed evidence.
 - Portal workflows enforce the configured data model but do not invent legal governance authority absent from governing documents or applicable law.
 - No bootstrap secret is embedded in the public GitHub Pages client.
 - No manual/composite Firestore indexes are defined or deployed.
@@ -145,24 +153,24 @@ meetingMinutes        Google-linked structured minutes metadata
 meetingRecords        immutable certified meeting master records
 meetingRecordEntries  immutable certified source snapshots
 recordEvents          permanent record-certification events
-committees             Phase 8 committee records
+committees             committee records
 coiDisclosures         annual director COI disclosures
 conflictRecords        specific conflict / recusal / management records
 officerTerms           historical Board officer assignments
 boardTasks             Board follow-up assignments
 complianceItems        governance/compliance obligations
-governanceEvents       append-only Phase 8 operational history
-system                 Founder-only counters/config foundation
-auditEvents            administrative audit records
+governanceEvents       append-only governance operational history
+system                 Founder-only counters, security policy, incidents, freeze/review markers
+auditEvents            append-only administrative/access/security audit records
 ```
 
-Future Phase 9+ collections remain deny-by-default until implemented.
+Phase 9 deliberately reuses the already-protected `system` and `auditEvents` collections rather than opening unnecessary new security collections.
 
 ## No manual/composite indexes
 
 There is intentionally no `firestore.indexes.json`.
 
-Phases 1–8 use direct document reads, authorized plain collection reads, or one single-field equality / `array-contains` filter at a time. Sorting, searching, quorum math, vote thresholds, due-state calculations, record summaries, and governance dashboard metrics remain client-side.
+Phases 1–9 use direct document reads, authorized plain collection reads, or one single-field equality / `array-contains` filter at a time. Sorting, searching, quorum math, vote thresholds, due-state calculations, permanent-record summaries, audit merging, privilege analysis, and security metrics remain client-side.
 
 Deploy rules only:
 
@@ -175,7 +183,7 @@ firebase deploy --only firestore:rules
 
 ## Serverless boundaries
 
-The portal intentionally uses GitHub Pages + Firebase Authentication + Cloud Firestore only. Meeting-wide quorum is calculated from Phase 5 attendance in the live client and preserved with each vote; Firestore Rules validate individual ballot eligibility and presence. Phase 8 compliance due-state labels are calculated when the portal is used rather than by a scheduled backend worker.
+The portal intentionally uses GitHub Pages + Firebase Authentication + Cloud Firestore only. Meeting-wide quorum is calculated from Phase 5 attendance in the live client and preserved with each vote; Firestore Rules validate individual ballot eligibility and presence. Phase 8 compliance due-state labels are calculated when the portal is used rather than by a scheduled backend worker. Phase 9 does not invent pre-auth security telemetry or server-side intrusion detection that this architecture cannot securely provide.
 
 ## Project documentation
 
@@ -187,6 +195,7 @@ The portal intentionally uses GitHub Pages + Firebase Authentication + Cloud Fir
 - `docs/PHASE-6-LIVE-ACTIONS.md`
 - `docs/PHASE-7-PERMANENT-RECORDS.md`
 - `docs/PHASE-8-GOVERNANCE-OPS.md`
+- `docs/PHASE-9-ADMIN-SECURITY.md`
 - `docs/FOUNDER-BOOTSTRAP.md`
 - `docs/DEPLOYMENT.md`
 
@@ -199,6 +208,7 @@ The portal intentionally uses GitHub Pages + Firebase Authentication + Cloud Fir
 /tests/phase6-governance.html
 /tests/phase7-records.html
 /tests/phase8-governance.html
+/tests/phase9-security.html
 ```
 
 Serve the repository over HTTP before opening the harnesses:
