@@ -353,12 +353,18 @@ function presenceLabel(status) {
 }
 
 function renderAttendanceTable(meeting) {
-  const canManage = hasPermission(currentProfile, PERMISSIONS.MEETINGS_ATTENDANCE_MANAGE);
+  const canManage = hasPermission(currentProfile, PERMISSIONS.MEETINGS_ATTENDANCE_MANAGE)
+    && !["adjourned", "cancelled"].includes(meeting.status);
+  const baseStatuses = meeting.status === "scheduled"
+    ? ["invited", "excused"]
+    : ["invited", "present", "departed", "excused", "absent"];
+
   const rows = selectedAttendance.map((entry) => {
     const statusClass = `attendance-${entry.presenceStatus || "invited"}`;
+    const statuses = baseStatuses.includes(entry.presenceStatus) ? baseStatuses : [entry.presenceStatus, ...baseStatuses];
     const control = canManage
       ? `<select class="attendance-select" data-attendance-uid="${entry.directorUid}">
-          ${["invited", "present", "departed", "excused", "absent"].map((status) => `<option value="${status}"${entry.presenceStatus === status ? " selected" : ""}>${presenceLabel(status)}</option>`).join("")}
+          ${statuses.map((status) => `<option value="${status}"${entry.presenceStatus === status ? " selected" : ""}>${presenceLabel(status)}</option>`).join("")}
         </select>`
       : `<span class="${statusClass}">${presenceLabel(entry.presenceStatus)}</span>`;
     return `<tr><td><strong>${escapeHtml(entry.directorName || "Director")}</strong><small>${escapeHtml(entry.directorNumber || "")}</small></td><td>${escapeHtml(entry.boardRole || "Director")}</td><td>${entry.votingEligible ? "Eligible" : "Ineligible"}</td><td>${control}</td></tr>`;
@@ -403,7 +409,7 @@ function renderSelfCheckIn(meeting) {
   const own = selectedAttendance.find((entry) => entry.directorUid === uid);
   if (!own) return '<div class="meeting-self-checkin"><div><strong>You are not on this meeting roster.</strong><span>Attendance actions are unavailable for this meeting.</span></div></div>';
 
-  if (!["checkin_open", "in_session"].includes(meeting.status)) {
+  if (!["checkin_open", "in_session", "recessed"].includes(meeting.status)) {
     return `<div class="meeting-self-checkin"><div><strong>Check-in is ${meeting.status === "scheduled" ? "not open yet" : "closed"}.</strong><span>Your roster status is ${presenceLabel(own.presenceStatus)}.</span></div></div>`;
   }
 
