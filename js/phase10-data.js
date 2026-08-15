@@ -113,8 +113,11 @@ export async function saveLaunchReadiness(input, profile, diagnostics = null) {
   const items = normalizeManualState(input.items || current?.items || {});
   const notes = String(input.notes || "").trim().slice(0, 8000) || null;
   const requestedStatus = ["draft", "ready_for_launch", "launched"].includes(input.status) ? input.status : (current?.status || "draft");
+  if (current?.status === "launched" && requestedStatus !== "launched") {
+    throw new Error("The portal is already recorded as Production Launched. The live launch status cannot be downgraded; save future notes/checklist changes while retaining Launched status.");
+  }
   if (["ready_for_launch", "launched"].includes(requestedStatus)) {
-    if (!diagnostics?.checks) throw new Error("Run current production diagnostics before recording launch readiness.");
+    if (!Array.isArray(diagnostics?.checks) || diagnostics.checks.length === 0) throw new Error("Run current production diagnostics before recording launch readiness.");
     const gate = evaluateLaunchGate(diagnostics.checks, items);
     if (!gate.ready) throw new Error(`Launch gate is not clear: ${gate.criticalFailures.length + gate.criticalWarnings.length} automatic blocker(s) and ${gate.incompleteManual.length} manual item(s) remain.`);
   }
@@ -127,7 +130,7 @@ export async function saveLaunchReadiness(input, profile, diagnostics = null) {
     status: requestedStatus,
     items,
     notes,
-    automaticCheckSummary: diagnostics?.checks ? {
+    automaticCheckSummary: Array.isArray(diagnostics?.checks) && diagnostics.checks.length ? {
       pass: diagnostics.checks.filter((entry) => entry.status === "pass").length,
       warning: diagnostics.checks.filter((entry) => entry.status === "warning").length,
       fail: diagnostics.checks.filter((entry) => entry.status === "fail").length,
@@ -139,8 +142,8 @@ export async function saveLaunchReadiness(input, profile, diagnostics = null) {
     updatedAt: serverTimestamp(),
     updatedBy: auth.currentUser.uid,
     updatedByName: actorName,
-    readyAt: requestedStatus === "ready_for_launch" ? serverTimestamp() : (current?.readyAt || null),
-    launchedAt: requestedStatus === "launched" ? serverTimestamp() : (current?.launchedAt || null)
+    readyAt: requestedStatus === "ready_for_launch" ? (current?.readyAt || serverTimestamp()) : (current?.readyAt || null),
+    launchedAt: requestedStatus === "launched" ? (current?.launchedAt || serverTimestamp()) : (current?.launchedAt || null)
   };
   const batch = writeBatch(db);
   batch.set(ref, payload, { merge: false });
