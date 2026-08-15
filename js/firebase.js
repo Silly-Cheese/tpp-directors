@@ -26,3 +26,14 @@ setPersistence(auth, browserLocalPersistence).catch((error) => {
 setPersistence(provisioningAuth, inMemoryPersistence).catch((error) => {
   console.error("Unable to configure provisioning authentication persistence", error);
 });
+
+// The static site has a single app.js script tag. Governance feature modules are
+// loaded from this shared Firebase entry path so Phases 5+ execute on GitHub Pages
+// without requiring a build step or additional HTML script tags.
+if (typeof window !== "undefined") {
+  Promise.resolve()
+    .then(() => import("./phase5.js"))
+    .then(() => import("./phase5-polish.js"))
+    .then(() => import("./phase6.js"))
+    .catch((error) => console.error("Unable to load Board governance modules", error));
+}
