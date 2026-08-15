@@ -413,7 +413,7 @@ service cloud.firestore {
     function selfMayCheckIn() {
       return activeDirector()
         && resource.data.directorUid == request.auth.uid
-        && meetingCurrent(resource.data.meetingId).status in ['checkin_open', 'in_session']
+        && meetingCurrent(resource.data.meetingId).status in ['checkin_open', 'in_session', 'recessed']
         && resource.data.presenceStatus in ['invited', 'departed']
         && request.resource.data.presenceStatus == 'present'
         && request.resource.data.updatedBy == request.auth.uid
@@ -430,6 +430,7 @@ service cloud.firestore {
 
     function attendanceManagerMayUpdate() {
       return hasCapability('meetings.attendance.manage')
+        && meetingCurrent(resource.data.meetingId).status in ['scheduled', 'checkin_open', 'in_session', 'recessed']
         && request.resource.data.meetingId == resource.data.meetingId
         && request.resource.data.directorUid == resource.data.directorUid
         && request.resource.data.directorNumber == resource.data.directorNumber
@@ -437,6 +438,10 @@ service cloud.firestore {
         && request.resource.data.votingEligible == resource.data.votingEligible
         && request.resource.data.invited == resource.data.invited
         && request.resource.data.presenceStatus in ['invited', 'present', 'departed', 'excused', 'absent']
+        && (
+          request.resource.data.presenceStatus in ['invited', 'excused']
+          || meetingCurrent(resource.data.meetingId).status in ['checkin_open', 'in_session', 'recessed']
+        )
         && request.resource.data.updatedBy == request.auth.uid
         && request.resource.data.updatedAt == request.time
         && request.resource.data.lastPresenceChangeAt == request.time
