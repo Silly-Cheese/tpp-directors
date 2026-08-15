@@ -56,46 +56,71 @@ Implemented and hardened:
 - Founder management of Board role, officer role, status, term, voting eligibility, account state, and directory visibility;
 - automatic Board-directory creation and Founder backfill;
 - Board notices with priority, expiration, publishing, and archive controls;
-- server-side enforcement that ordinary directors can read only `directoryVisible == true` Board-directory records;
-- server-side enforcement that ordinary directors can read only published Board notices;
+- server-side enforcement of hidden directory records and archived notice privacy;
 - no manual/composite indexes.
 
-### Phase 4 — Board Document Center & Board Inbox: CODE COMPLETE
+### Phase 4 — Board Document Center & Board Inbox: COMPLETE
+
+Implemented and reviewed:
+
+- Google Docs / Drive / Sheets / Slides link-only submissions;
+- no file upload input and no Firebase Storage;
+- client + Security Rules Google-link validation;
+- `BDOC-YYYY-XXXXXX` numbering without a counter;
+- document categories and requested Board actions;
+- Board-wide, officer, selected-director, and Founder-only access scopes;
+- Board Inbox for `documents.review`;
+- submitted / under review / returned for revision / agenda ready / approved / rejected / tabled / archived statuses;
+- server-enforced transition rules;
+- submitter revision/resubmission workflow;
+- detailed document viewer and review notes;
+- client-side search/filter/sort;
+- append-only `documentEvents` history;
+- unique `lastEventId` binding so every accepted history event must correspond to the actual document mutation that reserved it;
+- fresh event-ID enforcement to prevent duplicate/fabricated event records;
+- Phase 4 browser QA harness;
+- no manual/composite indexes.
+
+### Phase 5 — Board Meetings, Check-In, Attendance & Quorum: CODE COMPLETE
 
 Implemented:
 
-- full Board Document Center integrated into the portal;
-- **Google-link-only** submissions — no upload input exists;
-- accepted HTTPS hosts: Google Docs, Google Drive, Google Sheets, and Google Slides;
-- automatic Google link-type detection;
-- `BDOC-YYYY-XXXXXX` record numbering without a Firestore counter;
-- categories for governance, policy, financial, program, committee, report, legal, minutes, and other records;
-- access scopes for Board-wide, Board Officers, selected directors, and Founder-only records;
-- submitting-director access to their own records throughout review/revision;
-- Board Inbox for accounts with `documents.review`;
-- document statuses: submitted, under review, returned for revision, agenda ready, approved, rejected, tabled, archived;
-- server-enforced review transition rules;
-- revision/resubmission workflow;
-- append-only `documentEvents` history;
-- detailed record viewer with Google-document launch link;
-- latest review-note display;
-- dashboard document summary/recent records;
-- search, category filtering, status filtering, and client-side sorting;
-- `agenda_ready` handoff state reserved for Phase 5/6 meeting integration;
-- Board/officer/restricted document access enforced by Firestore Security Rules;
-- separate single-field Firestore queries merged/deduplicated in the browser;
-- no manual/composite indexes;
-- Phase 4 browser QA harness.
+- live Board Meeting Room integrated into the existing portal;
+- `BM-YYYY-XXXXXX` meeting numbering without a counter;
+- regular, special, organizational, and emergency meeting types;
+- in-person, virtual, and hybrid meeting modes;
+- scheduled meeting creation;
+- invited-director roster snapshots;
+- frozen voting-eligible roster snapshots;
+- configurable quorum requirement with a majority helper when left blank;
+- `meetings.view`, `meetings.create`, `meetings.activate`, `meetings.control`, and `meetings.attendance.manage` permissions;
+- Founder root access to every meeting capability;
+- activation / Check-In Open state;
+- invited-director self check-in;
+- late arrival and return after departure, including during recess;
+- live attendance roster using Firestore snapshots;
+- present / departed / excused / absent attendance management;
+- live quorum derived from current voting-eligible directors marked present;
+- Call to Order;
+- Recess;
+- Resume;
+- Adjourn;
+- pre-session cancellation;
+- attendance locking after adjournment/cancellation;
+- live dashboard meeting banner;
+- Firestore Security Rules preventing roster injection, quorum rewriting, unauthorized lifecycle changes, and post-adjournment attendance edits;
+- Phase 5 browser QA harness;
+- no manual/composite indexes.
 
-**External production verification is still required** after GitHub Pages, Firebase Authentication, DNS, and Firestore Security Rules are configured/deployed. That is deployment work, not unfinished generation.
+**External production verification is still required** after GitHub Pages, Firebase Authentication, DNS, Founder bootstrap, and the current Firestore Security Rules are configured/deployed. That is deployment work rather than unfinished generation.
 
 ## Implementation phases
 
 1. **Foundation — complete**
 2. **Accounts, PIN authentication, permissions — code complete**
 3. **Director dashboard & Board directory — complete**
-4. **Google-link document center & Board Inbox — code complete**
-5. Meetings, activation, live check-in, attendance and quorum
+4. **Google-link document center & Board Inbox — complete**
+5. **Meetings, activation, live check-in, attendance and quorum — code complete**
 6. Agenda, motions, resolutions and live voting
 7. Minutes, certifications and permanent Board records
 8. Committees, conflicts, officer management, tasks and compliance
@@ -111,8 +136,10 @@ Implemented:
 - PINs and activation codes are never stored in Firestore.
 - Board documents are links/metadata only; Firebase Storage is never used.
 - Google Drive sharing permissions remain independent of portal authorization.
-- Restricted document records are not exposed by a broad ordinary-director collection read.
-- Document review transitions are constrained server-side.
+- Document review transitions and history-event integrity are enforced server-side.
+- Meeting invitation lists, voting-eligible snapshots, and quorum requirements cannot be rewritten through live meeting controls.
+- Quorum is derived from current attendance rather than a mutable `quorumAchieved` field.
+- Attendance becomes immutable after adjournment/cancellation.
 - Historical records are preserved rather than silently rewritten/deleted.
 - No bootstrap secret is embedded in the public GitHub Pages client.
 - The public login directory permits only exact document lookup; collection listing is denied.
@@ -126,7 +153,9 @@ loginDirectory     exact pre-auth name lookup
 boardDirectory     Board-facing director profiles
 announcements      Board notices
 documents          Google-linked Board document metadata
-documentEvents     append-only document history
+documentEvents     mutation-bound append-only document history
+meetings           Board meeting records and lifecycle state
+meetingAttendance  one attendance record per meeting/director pair
 system             protected counters/config foundation
 auditEvents        Founder-only administrative audit records
 ```
@@ -137,7 +166,7 @@ Future governance collections remain deny-by-default until their implementation 
 
 There is intentionally no `firestore.indexes.json`.
 
-Phase 1-4 use direct document reads, unrestricted reads only where the role may see the full collection, or separate single-field equality / `array-contains` queries. Results are merged, filtered, searched, and sorted client-side.
+Phases 1–5 use direct document reads, plain authorized collection reads, or one single-field equality / `array-contains` filter at a time. Search, sorting, filtering, quorum calculations, and summary logic remain client-side.
 
 Deploy rules only:
 
@@ -152,10 +181,12 @@ firebase deploy --only firestore:rules
 - `docs/PHASE-2-AUTHENTICATION.md`
 - `docs/PHASE-3-DIRECTOR-WORKSPACE.md`
 - `docs/PHASE-4-DOCUMENT-CENTER.md`
+- `docs/PHASE-5-MEETINGS.md`
 - `docs/FOUNDER-BOOTSTRAP.md`
 - `docs/DEPLOYMENT.md`
 - `tests/phase2-phase3.html`
 - `tests/phase4-documents.html`
+- `tests/phase5-meetings.html`
 
 ## Local development
 
