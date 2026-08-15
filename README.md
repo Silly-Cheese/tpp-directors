@@ -68,28 +68,53 @@ Implemented and reviewed:
 - Phase 8 browser QA harness;
 - no manual/composite indexes.
 
-### Phase 9 — Founder Administration, Audit & Security: CODE COMPLETE
+### Phase 9 — Founder Administration, Audit & Security: FINISHED / CODE COMPLETE
 
-Implemented:
+Implemented and finalized:
 
 - dedicated **Security & Audit Center**;
 - Founder-only security overview and privilege exposure analysis;
 - delegated `audit.view` read-only administrative audit access;
+- live revocation of delegated audit access while the user is signed in;
 - consolidated Founder audit view across administrative, document, governance, and permanent-record event streams;
 - browser-side audit search/filtering without composite indexes;
 - explicit context-correlation labels for browser-originated document/governance events rather than falsely representing them as server-signed logs;
 - sensitive-permission access matrix;
 - non-Founder wildcard permission warning;
 - formal access-review audit snapshots;
+- atomic access-review write of the immutable audit event plus `system/lastAccessReview` marker;
 - Founder security-policy record under `system/portalSecurityPolicy`;
 - Founder-only security incident register with severity/status/response notes;
 - real emergency access freeze that changes all affected non-Founder accounts to `suspended` while preserving the protected Founder root;
 - emergency restore that returns still-frozen accounts to their prior recorded account state;
 - audit events for emergency freeze, restore, security policy changes, incidents, and formal access reviews;
+- cross-phase portal navigation synchronization;
 - Phase 9 browser QA harness;
 - no new Firebase products and no manual/composite indexes.
 
-**External production verification is still required** after GitHub Pages, Firebase Authentication, DNS, Founder bootstrap, and the current Firestore Security Rules are configured/deployed. That is deployment work rather than unfinished generation.
+### Phase 10 — Production Hardening, Verification & Launch Readiness: CODE COMPLETE
+
+Implemented:
+
+- resilient sequential governance-module loader with per-module `loading / loaded / failed` status;
+- session-local runtime error diagnostics;
+- offline/degraded-mode warning banner for official Board workflows;
+- Founder-only **Launch Readiness Center**;
+- automatic production hostname / HTTPS / Firebase project / CNAME checks;
+- `firebase.json` product-scope verification;
+- deployed `firestore.indexes.json` presence check;
+- Founder-root session verification;
+- one-root / non-Founder-wildcard security checks;
+- emergency-freeze / security-policy / access-review / incident checks;
+- live-meeting and unfinished-vote launch checks;
+- Founder manual go-live checklist stored in `system/launchReadiness`;
+- launch gate that requires all critical automatic checks and all manual checks to clear;
+- auditable `draft`, `ready_for_launch`, and `launched` operational milestones;
+- links to every Phase 2–10 browser QA harness;
+- final production documentation and go-live checklist;
+- no new Firebase products and no manual/composite indexes.
+
+**All 10 generation phases are now code-complete. External production verification is still required.** GitHub Pages/DNS/Auth settings, Founder bootstrap, current Firestore Rules deployment, multi-account live testing, and final go-live checks must be completed against the real production environment before the portal should be described as production-verified.
 
 ## Implementation phases
 
@@ -101,8 +126,8 @@ Implemented:
 6. **Agenda, motions, resolutions and live voting — finished / code complete**
 7. **Minutes, certifications and permanent Board records — finished / code complete**
 8. **Committees, conflicts, officer management, tasks and compliance — finished / code complete**
-9. **Founder administration, consolidated audit and security controls — code complete**
-10. Operational hardening, production testing and launch
+9. **Founder administration, consolidated audit and security controls — finished / code complete**
+10. **Operational hardening, production verification tooling and launch readiness — code complete**
 
 ## Security principles
 
@@ -128,6 +153,8 @@ Implemented:
 - The Founder root is excluded from emergency account freeze operations.
 - Pre-authentication failed-PIN telemetry is not represented as authoritative because this no-backend architecture cannot securely accept unauthenticated security-log writes without spoofing risk.
 - Browser-originated operational events are presented as contextual audit history, not cryptographically server-signed evidence.
+- Phase 10 runtime errors remain local diagnostics rather than untrusted Firestore audit writes.
+- Phase 10 launch status records an operational milestone; it does not configure hosting, DNS, Firebase Authentication, or deploy Firestore Rules.
 - Portal workflows enforce the configured data model but do not invent legal governance authority absent from governing documents or applicable law.
 - No bootstrap secret is embedded in the public GitHub Pages client.
 - No manual/composite Firestore indexes are defined or deployed.
@@ -160,17 +187,17 @@ officerTerms           historical Board officer assignments
 boardTasks             Board follow-up assignments
 complianceItems        governance/compliance obligations
 governanceEvents       append-only governance operational history
-system                 Founder-only counters, security policy, incidents, freeze/review markers
-auditEvents            append-only administrative/access/security audit records
+system                 Founder-only counters, security records, launch-readiness state
+auditEvents            append-only administrative/access/security/launch audit records
 ```
 
-Phase 9 deliberately reuses the already-protected `system` and `auditEvents` collections rather than opening unnecessary new security collections.
+Phases 9–10 deliberately reuse the already-protected `system` and `auditEvents` collections rather than opening unnecessary new security or deployment collections.
 
 ## No manual/composite indexes
 
 There is intentionally no `firestore.indexes.json`.
 
-Phases 1–9 use direct document reads, authorized plain collection reads, or one single-field equality / `array-contains` filter at a time. Sorting, searching, quorum math, vote thresholds, due-state calculations, permanent-record summaries, audit merging, privilege analysis, and security metrics remain client-side.
+Phases 1–10 use direct document reads, authorized plain collection reads, or one single-field equality / `array-contains` filter at a time. Sorting, searching, quorum math, vote thresholds, due-state calculations, permanent-record summaries, audit merging, privilege analysis, security metrics, production diagnostics, and launch summaries remain client-side.
 
 Deploy rules only:
 
@@ -183,7 +210,7 @@ firebase deploy --only firestore:rules
 
 ## Serverless boundaries
 
-The portal intentionally uses GitHub Pages + Firebase Authentication + Cloud Firestore only. Meeting-wide quorum is calculated from Phase 5 attendance in the live client and preserved with each vote; Firestore Rules validate individual ballot eligibility and presence. Phase 8 compliance due-state labels are calculated when the portal is used rather than by a scheduled backend worker. Phase 9 does not invent pre-auth security telemetry or server-side intrusion detection that this architecture cannot securely provide.
+The portal intentionally uses GitHub Pages + Firebase Authentication + Cloud Firestore only. Meeting-wide quorum is calculated from Phase 5 attendance in the live client and preserved with each vote; Firestore Rules validate individual ballot eligibility and presence. Phase 8 compliance due-state labels are calculated when the portal is used rather than by a scheduled backend worker. Phase 9 does not invent pre-auth security telemetry or server-side intrusion detection that this architecture cannot securely provide. Phase 10 distinguishes automatic browser-verifiable checks from manual deployment facts that require Founder confirmation.
 
 ## Project documentation
 
@@ -196,6 +223,8 @@ The portal intentionally uses GitHub Pages + Firebase Authentication + Cloud Fir
 - `docs/PHASE-7-PERMANENT-RECORDS.md`
 - `docs/PHASE-8-GOVERNANCE-OPS.md`
 - `docs/PHASE-9-ADMIN-SECURITY.md`
+- `docs/PHASE-10-PRODUCTION-READINESS.md`
+- `docs/GO-LIVE-CHECKLIST.md`
 - `docs/FOUNDER-BOOTSTRAP.md`
 - `docs/DEPLOYMENT.md`
 
@@ -209,9 +238,10 @@ The portal intentionally uses GitHub Pages + Firebase Authentication + Cloud Fir
 /tests/phase7-records.html
 /tests/phase8-governance.html
 /tests/phase9-security.html
+/tests/phase10-production.html
 ```
 
-Serve the repository over HTTP before opening the harnesses:
+Serve the repository over HTTP before opening local harnesses:
 
 ```bash
 python -m http.server 8080
@@ -219,4 +249,4 @@ python -m http.server 8080
 
 ## Required external setup
 
-The repository cannot itself enable GitHub Pages, alter DNS, enable the Firebase Authentication provider, deploy Firestore Rules into the Firebase project, or create the initial privileged Founder Auth identity. Follow `docs/DEPLOYMENT.md` and `docs/FOUNDER-BOOTSTRAP.md` for those one-time actions.
+The repository cannot itself enable GitHub Pages, alter DNS, enable the Firebase Authentication provider, add the production Auth authorized domain, deploy Firestore Rules into the Firebase project, or create the initial privileged Founder Auth identity. Follow `docs/DEPLOYMENT.md`, `docs/FOUNDER-BOOTSTRAP.md`, `docs/PHASE-10-PRODUCTION-READINESS.md`, and `docs/GO-LIVE-CHECKLIST.md` for those actions.
