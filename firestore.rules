@@ -37,6 +37,10 @@ service cloud.firestore {
         );
     }
 
+    function isOfficer() {
+      return activeDirector() && currentDirector().officerRole != null;
+    }
+
     function selfMayReadDirector(directorId) {
       return signedIn()
         && request.auth.uid == directorId
@@ -87,11 +91,11 @@ service cloud.firestore {
       allow delete: if false;
     }
 
-    // Board-facing profile data is intentionally separated from sensitive account
-    // records. Directors with directory permission may list this collection without
-    // receiving login aliases, login keys, permission arrays, or account audit data.
+    // Phase 3: Board-facing profile data is separated from sensitive account data.
+    // Non-Founder list queries must constrain directoryVisible == true.
     match /boardDirectory/{directorId} {
-      allow get, list: if hasCapability('directors.view');
+      allow get, list: if founderDirector()
+        || (hasCapability('directors.view') && resource.data.directoryVisible == true);
       allow create, update: if founderDirector()
         && request.resource.data.directorNumber is string
         && request.resource.data.fullName is string
@@ -99,10 +103,7 @@ service cloud.firestore {
       allow delete: if false;
     }
 
-    // The login directory is keyed by SHA-256(normalized full name). Signed-out
-    // clients may fetch one exact record after a name is entered, but collection
-    // listing is never public. The record contains an opaque Firebase Auth alias,
-    // not a director email address or PIN.
+    // Pre-auth exact-name lookup. Collection listing is never public.
     match /loginDirectory/{loginKey} {
       allow get: if true;
       allow list: if false;
@@ -130,8 +131,11 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // Phase 3: ordinary directors may only read currently published notices.
+    // The client queries status == 'published'; notice managers may inspect all.
     match /announcements/{noticeId} {
-      allow get, list: if activeDirector();
+      allow get, list: if hasCapability('announcements.manage')
+        || (activeDirector() && resource.data.status == 'published');
       allow create: if hasCapability('announcements.manage')
         && request.resource.data.title is string
         && request.resource.data.body is string
@@ -143,9 +147,111 @@ service cloud.firestore {
       allow delete: if false;
     }
 
-    // Human-readable director numbers use one counter document. Directory, notice,
-    // and account lists are sorted/filtered in the browser; no manual/composite
-    // Firestore indexes are defined or required by the portal architecture.
+    function validDocumentAccess(data) {
+      return data.accessScope in ['board', 'officers', 'restricted', 'founder']
+        && data.allowedDirectorUids is list
+        && (data.accessScope != 'restricted' || data.allowedDirectorUids.size() > 0);
+    }
+
+    function canReadDocumentData(data) {
+      return founderDirector()
+        || hasCapability('documents.review')
+        || (
+          activeDirector()
+          && data.submittedBy == request.auth.uid
+        )
+        || (
+          hasCapability('documents.view')
+          && (
+            data.accessScope == 'board'
+            || (data.accessScope == 'officers' && isOfficer())
+            || (data.accessScope == 'restricted' && request.auth.uid in data.allowedDirectorUids)
+            || (data.accessScope == 'founder' && founderDirector())
+          )
+        );
+    }
+
+    function validNewDocument() {
+      return hasCapability('documents.submit')
+        && request.resource.data.documentNumber is string
+        && request.resource.data.title is string
+        && request.resource.data.description is string
+        && request.resource.data.documentUrl is string
+        && request.resource.data.linkType is string
+        && request.resource.data.category in [
+          'governance', 'policy', 'financial', 'program', 'committee',
+          'report', 'legal', 'minutes', 'other'
+        ]
+        && request.resource.data.status == 'submitted'
+        && request.resource.data.submittedBy == request.auth.uid
+        && request.resource.data.revisionNumber == 1
+        && validDocumentAccess(request.resource.data);
+    }
+
+    function submitterMayReviseDocument() {
+      return activeDirector()
+        && resource.data.submittedBy == request.auth.uid
+        && resource.data.status in ['submitted', 'returned_for_revision']
+        && request.resource.data.submittedBy == resource.data.submittedBy
+        && request.resource.data.documentNumber == resource.data.documentNumber
+        && request.resource.data.accessScope == resource.data.accessScope
+        && request.resource.data.allowedDirectorUids == resource.data.allowedDirectorUids
+        && request.resource.data.category == resource.data.category
+        && request.resource.data.status == 'submitted'
+        && request.resource.data.revisionNumber == resource.data.revisionNumber + 1
+        && request.resource.data.updatedBy == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'title', 'description', 'documentUrl', 'linkType', 'requestedAction',
+          'status', 'revisionNumber', 'reviewNote', 'reviewedBy',
+          'reviewedByName', 'reviewedAt', 'updatedAt', 'updatedBy'
+        ]);
+    }
+
+    function reviewerMayUpdateDocument() {
+      return hasCapability('documents.review')
+        && request.resource.data.submittedBy == resource.data.submittedBy
+        && request.resource.data.documentNumber == resource.data.documentNumber
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.accessScope == resource.data.accessScope
+        && request.resource.data.allowedDirectorUids == resource.data.allowedDirectorUids
+        && request.resource.data.category == resource.data.category
+        && request.resource.data.status in [
+          'under_review', 'returned_for_revision', 'agenda_ready',
+          'approved', 'rejected', 'tabled', 'archived'
+        ]
+        && request.resource.data.updatedBy == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'status', 'reviewNote', 'reviewedBy', 'reviewedByName',
+          'reviewedAt', 'archivedAt', 'updatedAt', 'updatedBy'
+        ]);
+    }
+
+    match /documents/{documentId} {
+      allow get, list: if canReadDocumentData(resource.data);
+      allow create: if validNewDocument();
+      allow update: if submitterMayReviseDocument() || reviewerMayUpdateDocument();
+      allow delete: if false;
+    }
+
+    function documentAfter(documentId) {
+      return getAfter(/databases/$(database)/documents/documents/$(documentId)).data;
+    }
+
+    match /documentEvents/{eventId} {
+      allow get, list: if signedIn()
+        && resource.data.documentId is string
+        && canReadDocumentData(get(/databases/$(database)/documents/documents/$(resource.data.documentId)).data);
+      allow create: if activeDirector()
+        && request.resource.data.documentId is string
+        && request.resource.data.actorUid == request.auth.uid
+        && request.resource.data.type is string
+        && canReadDocumentData(documentAfter(request.resource.data.documentId));
+      allow update, delete: if false;
+    }
+
+    // Human-readable director numbers use one counter document. All Phase 1-4
+    // collection searching/filtering/sorting remains client-side or uses a single
+    // equality/array-contains filter; no manual/composite indexes are deployed.
     match /system/{systemDocument} {
       allow read, create, update: if founderDirector();
       allow delete: if false;
@@ -158,7 +264,7 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
-    // Governance collections remain closed until their implementation phases.
+    // Future governance collections remain closed until their implementation phase.
     match /{document=**} {
       allow read, write: if false;
     }
