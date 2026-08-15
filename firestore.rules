@@ -28,6 +28,15 @@ service cloud.firestore {
         && currentDirector().root == true;
     }
 
+    function hasCapability(capability) {
+      return founderDirector()
+        || (
+          activeDirector()
+          && currentDirector().permissions is list
+          && currentDirector().permissions.hasAny(['*', capability])
+        );
+    }
+
     function selfMayReadDirector(directorId) {
       return signedIn()
         && request.auth.uid == directorId
@@ -59,7 +68,7 @@ service cloud.firestore {
     function selfMayCompleteActivation(directorId) {
       return signedIn()
         && request.auth.uid == directorId
-        && resource.data.accountStatus == 'awaiting_activation'
+        && resource.data.accountStatus in ['awaiting_activation', 'pin_reset_required']
         && request.resource.data.accountStatus == 'active'
         && request.resource.data.updatedBy == request.auth.uid
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
@@ -75,6 +84,18 @@ service cloud.firestore {
       allow list: if founderDirector();
       allow create: if founderMayCreateDirector();
       allow update: if founderMayUpdateOrdinaryDirector() || selfMayCompleteActivation(directorId);
+      allow delete: if false;
+    }
+
+    // Board-facing profile data is intentionally separated from sensitive account
+    // records. Directors with directory permission may list this collection without
+    // receiving login aliases, login keys, permission arrays, or account audit data.
+    match /boardDirectory/{directorId} {
+      allow get, list: if hasCapability('directors.view');
+      allow create, update: if founderDirector()
+        && request.resource.data.directorNumber is string
+        && request.resource.data.fullName is string
+        && request.resource.data.boardStatus in ['interim', 'confirmed', 'leave_of_absence', 'former'];
       allow delete: if false;
     }
 
@@ -109,9 +130,22 @@ service cloud.firestore {
       allow delete: if false;
     }
 
-    // Phase 2 uses a single counter document for human-readable director numbers.
-    // All sorting and filtering of director lists is performed client-side so no
-    // manual/composite Firestore indexes are required.
+    match /announcements/{noticeId} {
+      allow get, list: if activeDirector();
+      allow create: if hasCapability('announcements.manage')
+        && request.resource.data.title is string
+        && request.resource.data.body is string
+        && request.resource.data.status == 'published'
+        && request.resource.data.priority in ['normal', 'important', 'urgent']
+        && request.resource.data.createdBy == request.auth.uid;
+      allow update: if hasCapability('announcements.manage')
+        && request.resource.data.createdBy == resource.data.createdBy;
+      allow delete: if false;
+    }
+
+    // Human-readable director numbers use one counter document. Directory, notice,
+    // and account lists are sorted/filtered in the browser; no manual/composite
+    // Firestore indexes are defined or required by the portal architecture.
     match /system/{systemDocument} {
       allow read, create, update: if founderDirector();
       allow delete: if false;
