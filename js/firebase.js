@@ -27,6 +27,7 @@ setPersistence(provisioningAuth, inMemoryPersistence).catch((error) => {
 // from the shared Firebase entry path used by the single app.js script tag.
 if (typeof window !== "undefined") {
   Promise.resolve()
+    .then(() => import("./portal-navigation-sync.js"))
     .then(() => import("./phase5.js"))
     .then(() => import("./phase5-polish.js"))
     .then(() => import("./phase6.js"))
