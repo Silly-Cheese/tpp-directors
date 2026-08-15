@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Phase 4 Document QA</title>
+  <style>
+    body{font-family:system-ui,sans-serif;max-width:900px;margin:40px auto;padding:0 20px;color:#172033}h1{margin-bottom:4px}.pass{color:#087443}.fail{color:#b42318}li{margin:7px 0}code{background:#f2f4f7;padding:2px 5px;border-radius:5px}
+  </style>
+</head>
+<body>
+  <h1>Phase 4 Document QA</h1>
+  <p>Non-destructive browser tests. This page does not write to Firebase.</p>
+  <ul id="results"></ul>
+  <script type="module">
+    import {
+      documentStatusLabel,
+      identifyGoogleLinkType,
+      isAllowedReviewTransition,
+      normalizeDocumentAccess,
+      normalizeDocumentCategory,
+      normalizeGoogleDocumentLink
+    } from "../js/document-data.js";
+
+    const results = document.querySelector("#results");
+    function test(name, fn) {
+      const li = document.createElement("li");
+      try { fn(); li.className="pass"; li.textContent=`PASS — ${name}`; }
+      catch (error) { li.className="fail"; li.textContent=`FAIL — ${name}: ${error.message}`; }
+      results.append(li);
+    }
+    function equal(actual, expected) { if (actual !== expected) throw new Error(`expected ${expected}, got ${actual}`); }
+    function throws(fn) { let failed=false; try{fn();}catch{failed=true;} if(!failed) throw new Error("expected function to throw"); }
+
+    test("Google Docs HTTPS link accepted", () => equal(identifyGoogleLinkType("https://docs.google.com/document/d/example/edit"), "Google Docs"));
+    test("Google Sheets link detected", () => equal(identifyGoogleLinkType("https://docs.google.com/spreadsheets/d/example/edit"), "Google Sheets"));
+    test("Google Slides link detected", () => equal(identifyGoogleLinkType("https://docs.google.com/presentation/d/example/edit"), "Google Slides"));
+    test("Google Drive link detected", () => equal(identifyGoogleLinkType("https://drive.google.com/file/d/example/view"), "Google Drive"));
+    test("Non-Google link rejected", () => throws(() => normalizeGoogleDocumentLink("https://example.com/file.pdf")));
+    test("Insecure Google HTTP link rejected", () => throws(() => normalizeGoogleDocumentLink("http://docs.google.com/document/d/example")));
+    test("Unknown category falls back to other", () => equal(normalizeDocumentCategory("something-else"), "other"));
+    test("Unknown access falls back to board", () => equal(normalizeDocumentAccess("unknown"), "board"));
+    test("Status label is human readable", () => equal(documentStatusLabel("returned_for_revision"), "Returned For Revision"));
+    test("Submitted may enter review", () => equal(isAllowedReviewTransition("submitted", "under_review"), true));
+    test("Under review may become agenda ready", () => equal(isAllowedReviewTransition("under_review", "agenda_ready"), true));
+    test("Agenda ready may be approved", () => equal(isAllowedReviewTransition("agenda_ready", "approved"), true));
+    test("Archived record cannot be reopened", () => equal(isAllowedReviewTransition("archived", "under_review"), false));
+    test("Rejected record cannot jump back to review", () => equal(isAllowedReviewTransition("rejected", "under_review"), false));
+  </script>
+</body>
+</html>
