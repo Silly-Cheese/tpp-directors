@@ -51,18 +51,16 @@ function ensureMeetingPolish() {
   const meetingId = selected?.dataset.meetingId;
   if (!meetingId) return;
 
+  let createdWorkspace = false;
   if (!$("#phase5-live-meta")) {
     const strip = detail.querySelector(".meeting-live-strip");
     if (strip) {
       const meta = document.createElement("div");
       meta.id = "phase5-live-meta";
       meta.className = "phase5-live-meta";
-      meta.innerHTML = `<span class="phase5-live-dot" aria-hidden="true"></span><strong>Live Boardroom</strong><span id="phase5-last-sync">Synced just now</span>`;
+      meta.innerHTML = `<span class="phase5-live-dot" aria-hidden="true"></span><strong>Live Boardroom</strong><span id="phase5-last-sync">Live Firestore updates enabled</span>`;
       strip.after(meta);
     }
-  } else {
-    const sync = $("#phase5-last-sync");
-    if (sync) sync.textContent = `Synced ${new Intl.DateTimeFormat("en-US", { hour: "numeric", minute: "2-digit", second: "2-digit" }).format(new Date())}`;
   }
 
   if (!$("#phase6-meeting-workspace")) {
@@ -72,9 +70,10 @@ function ensureMeetingPolish() {
     workspace.dataset.meetingId = meetingId;
     workspace.innerHTML = '<div class="phase5-phase6-placeholder"><strong>Board Actions</strong><span>Loading agenda, motions, and voting workspace…</span></div>';
     detail.append(workspace);
+    createdWorkspace = true;
   }
 
-  dispatchMeetingSelection(true);
+  dispatchMeetingSelection(createdWorkspace || meetingId !== lastMeetingId);
 }
 
 function installConfirmationGuard() {
