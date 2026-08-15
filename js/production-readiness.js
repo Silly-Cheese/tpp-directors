@@ -144,12 +144,14 @@ export function normalizeManualState(saved = {}) {
 }
 
 export function evaluateLaunchGate(checks = [], manualState = {}) {
+  const automaticAvailable = Array.isArray(checks) && checks.length > 0;
   const criticalFailures = checks.filter((entry) => entry.critical && entry.status === "fail");
   const criticalWarnings = checks.filter((entry) => entry.critical && entry.status === "warning");
   const normalized = normalizeManualState(manualState);
   const incompleteManual = MANUAL_LAUNCH_ITEMS.filter((item) => !normalized[item.id]);
   return {
-    ready: criticalFailures.length === 0 && criticalWarnings.length === 0 && incompleteManual.length === 0,
+    ready: automaticAvailable && criticalFailures.length === 0 && criticalWarnings.length === 0 && incompleteManual.length === 0,
+    automaticAvailable,
     criticalFailures,
     criticalWarnings,
     incompleteManual,
