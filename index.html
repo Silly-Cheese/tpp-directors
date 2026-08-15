@@ -26,12 +26,12 @@
         <div class="login-copy">
           <p class="eyebrow">BOARD GOVERNANCE</p>
           <h1 id="login-title">Director access starts here.</h1>
-          <p>This private portal will manage Board meetings, check-in, quorum, voting, resolutions, documents, permissions, and permanent governance records.</p>
+          <p>This private portal manages Board identity, permissions, meetings, voting, documents, resolutions, and permanent governance records.</p>
           <div class="status-card">
             <span class="status-dot" aria-hidden="true"></span>
             <div>
-              <strong>Phase 1 foundation active</strong>
-              <span>Firebase Authentication and Cloud Firestore are connected. Director PIN activation is added in Phase 2.</span>
+              <strong>Phase 2 account system active</strong>
+              <span>Board accounts are created by the Founder Director. Directors identify themselves by full name and use a four-digit PIN after first activation.</span>
             </div>
           </div>
         </div>
@@ -40,25 +40,48 @@
           <div class="card-heading">
             <p class="eyebrow">DIRECTOR SIGN IN</p>
             <h2>Board Portal</h2>
-            <p>Use your Board account to continue.</p>
+            <p id="login-instructions">Enter your full name to continue.</p>
           </div>
 
           <form id="login-form" novalidate>
-            <label for="full-name">Full name</label>
-            <input id="full-name" name="fullName" autocomplete="name" placeholder="Enter your full name" required>
+            <div id="name-field" class="field-group">
+              <label for="full-name">Full name</label>
+              <input id="full-name" name="fullName" autocomplete="name" placeholder="Enter your full name" required>
+            </div>
 
-            <div id="pin-field" hidden>
+            <div id="activation-field" class="field-group" hidden>
+              <label for="activation-code">Activation code</label>
+              <input id="activation-code" name="activationCode" autocomplete="one-time-code" inputmode="text" maxlength="14" placeholder="XXXX-XXXX-XXXX">
+              <small>Your one-time activation code is provided by the Founder Director.</small>
+            </div>
+
+            <div id="pin-field" class="field-group" hidden>
               <label for="pin">4-digit PIN</label>
               <input id="pin" name="pin" inputmode="numeric" autocomplete="current-password" pattern="[0-9]{4}" maxlength="4" placeholder="••••">
             </div>
 
             <button id="continue-button" type="submit">Continue</button>
+            <button id="login-back-button" class="text-button" type="button" hidden>Use a different name</button>
             <p id="login-message" class="form-message" role="status"></p>
+          </form>
+
+          <form id="pin-setup-form" class="pin-setup-form" hidden novalidate>
+            <div class="setup-banner">
+              <span>FIRST SIGN-IN</span>
+              <strong id="pin-setup-name">Director</strong>
+              <small>Create the four-digit PIN you will use for future Board Portal sign-ins.</small>
+            </div>
+            <label for="new-pin">New 4-digit PIN</label>
+            <input id="new-pin" name="newPin" inputmode="numeric" autocomplete="new-password" pattern="[0-9]{4}" maxlength="4" placeholder="••••" required>
+            <label for="confirm-pin">Confirm PIN</label>
+            <input id="confirm-pin" name="confirmPin" inputmode="numeric" autocomplete="new-password" pattern="[0-9]{4}" maxlength="4" placeholder="••••" required>
+            <button id="save-pin-button" type="submit">Activate Board Account</button>
+            <p id="pin-setup-message" class="form-message" role="status"></p>
           </form>
 
           <div class="security-note">
             <strong>Authorized Board access only.</strong>
-            <span>Access and governance actions may be recorded in the portal audit log.</span>
+            <span>Portal access and administrative actions may be recorded. Your four-digit PIN is never stored in Cloud Firestore.</span>
           </div>
         </div>
       </section>
@@ -67,28 +90,150 @@
         <aside class="sidebar">
           <div class="sidebar-title">
             <span class="brand-mark small">TPP</span>
-            <div><strong>Board Portal</strong><small id="account-role">Director</small></div>
+            <div>
+              <strong id="account-name">Board Portal</strong>
+              <small id="account-role">Director</small>
+            </div>
           </div>
           <nav aria-label="Board portal navigation">
-            <button class="nav-item active" type="button">Overview</button>
-            <button class="nav-item" type="button">Meetings</button>
-            <button class="nav-item" type="button">Board Documents</button>
-            <button class="nav-item" type="button">Resolutions</button>
-            <button class="nav-item" type="button">Directors</button>
-            <button class="nav-item founder-only" type="button">Founder Control</button>
+            <button class="nav-item active" type="button" data-view="overview">Overview</button>
+            <button class="nav-item" type="button" data-view="meetings">Meetings</button>
+            <button class="nav-item" type="button" data-view="documents">Board Documents</button>
+            <button class="nav-item" type="button" data-view="resolutions">Resolutions</button>
+            <button class="nav-item" type="button" data-view="directors">Directors</button>
+            <button class="nav-item founder-only" type="button" data-view="founder" hidden>Founder Control</button>
           </nav>
         </aside>
+
         <div class="portal-main">
           <div class="portal-topbar">
-            <div><p class="eyebrow">BOARD OF DIRECTORS</p><h1>Governance Overview</h1></div>
+            <div>
+              <p class="eyebrow">BOARD OF DIRECTORS</p>
+              <h1 id="view-title">Governance Overview</h1>
+            </div>
             <button id="sign-out-button" class="secondary-button" type="button">Sign out</button>
           </div>
-          <div class="metric-grid">
-            <article class="metric"><span>Active Meeting</span><strong>None</strong><small>No meeting is currently in session.</small></article>
-            <article class="metric"><span>Pending Votes</span><strong>0</strong><small>No Board actions require your vote.</small></article>
-            <article class="metric"><span>Board Inbox</span><strong>0</strong><small>No documents are awaiting review.</small></article>
-            <article class="metric"><span>Compliance</span><strong>Ready</strong><small>Foundation initialized.</small></article>
-          </div>
+
+          <section id="view-overview" class="portal-section">
+            <div class="metric-grid">
+              <article class="metric"><span>Active Meeting</span><strong>None</strong><small>Meeting activation and check-in arrive in Phase 5.</small></article>
+              <article class="metric"><span>Pending Votes</span><strong>0</strong><small>Live Board voting arrives in Phase 6.</small></article>
+              <article class="metric"><span>Board Inbox</span><strong>0</strong><small>Google-link document intake arrives in Phase 4.</small></article>
+              <article class="metric"><span>Account</span><strong id="account-status-metric">Active</strong><small id="account-number-metric">Board identity verified.</small></article>
+            </div>
+
+            <div class="panel-grid">
+              <article class="panel">
+                <div class="panel-heading">
+                  <div><p class="eyebrow">ACCOUNT</p><h2>Your Board access</h2></div>
+                </div>
+                <dl class="detail-list">
+                  <div><dt>Director</dt><dd id="profile-name">—</dd></div>
+                  <div><dt>Board role</dt><dd id="profile-board-role">—</dd></div>
+                  <div><dt>Officer role</dt><dd id="profile-officer-role">—</dd></div>
+                  <div><dt>Voting status</dt><dd id="profile-voting-status">—</dd></div>
+                </dl>
+              </article>
+              <article class="panel">
+                <div class="panel-heading">
+                  <div><p class="eyebrow">PHASE 2</p><h2>Identity & permissions</h2></div>
+                </div>
+                <p class="panel-copy">Authentication, Founder-provisioned accounts, activation, four-digit PIN access, and the permission model are being implemented before governance workflows are opened.</p>
+              </article>
+            </div>
+          </section>
+
+          <section id="view-placeholder" class="portal-section" hidden>
+            <article class="panel placeholder-panel">
+              <p class="eyebrow">COMING IN A LATER PHASE</p>
+              <h2 id="placeholder-title">Board module</h2>
+              <p id="placeholder-copy">This module is intentionally closed until its security rules and governance workflow are implemented.</p>
+            </article>
+          </section>
+
+          <section id="view-founder" class="portal-section" hidden>
+            <div class="section-heading-row">
+              <div>
+                <p class="eyebrow">FOUNDER DIRECTOR</p>
+                <h2>Control Center</h2>
+                <p>Create Board accounts and assign their initial access. The root Founder account remains protected from ordinary account administration.</p>
+              </div>
+              <button id="refresh-directors-button" class="secondary-button" type="button">Refresh accounts</button>
+            </div>
+
+            <div class="founder-grid">
+              <article class="panel">
+                <div class="panel-heading">
+                  <div><p class="eyebrow">CREATE ACCOUNT</p><h2>New Director</h2></div>
+                </div>
+                <form id="create-director-form" class="admin-form" novalidate>
+                  <label for="director-full-name">Full name</label>
+                  <input id="director-full-name" name="fullName" autocomplete="off" required>
+
+                  <div class="form-row">
+                    <div>
+                      <label for="director-board-role">Board role</label>
+                      <input id="director-board-role" name="boardRole" value="Director" required>
+                    </div>
+                    <div>
+                      <label for="director-officer-role">Officer role</label>
+                      <input id="director-officer-role" name="officerRole" placeholder="Optional">
+                    </div>
+                  </div>
+
+                  <div class="form-row">
+                    <div>
+                      <label for="director-voting-status">Voting status</label>
+                      <select id="director-voting-status" name="votingStatus">
+                        <option value="eligible">Eligible</option>
+                        <option value="ineligible">Ineligible</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label for="director-permission-template">Permission template</label>
+                      <select id="director-permission-template" name="permissionTemplate"></select>
+                    </div>
+                  </div>
+
+                  <button type="submit">Create Board Account</button>
+                  <p id="create-director-message" class="form-message" role="status"></p>
+                </form>
+
+                <div id="activation-result" class="activation-result" hidden>
+                  <span>ACCOUNT CREATED</span>
+                  <strong id="activation-result-name">Director</strong>
+                  <p>Give this one-time activation code directly to the director. It is intentionally not saved in Firestore.</p>
+                  <code id="activation-result-code">XXXX-XXXX-XXXX</code>
+                  <div class="activation-actions">
+                    <button id="copy-activation-button" class="secondary-button" type="button">Copy code</button>
+                    <small id="activation-result-number">DIR-000000</small>
+                  </div>
+                </div>
+              </article>
+
+              <article class="panel account-panel">
+                <div class="panel-heading account-heading">
+                  <div><p class="eyebrow">DIRECTOR ACCOUNTS</p><h2>Board access roster</h2></div>
+                  <span id="director-count" class="count-badge">0</span>
+                </div>
+                <div class="table-wrap">
+                  <table class="director-table">
+                    <thead>
+                      <tr>
+                        <th>Director</th>
+                        <th>Role</th>
+                        <th>Status</th>
+                        <th>Permissions</th>
+                      </tr>
+                    </thead>
+                    <tbody id="director-table-body">
+                      <tr><td colspan="4" class="empty-cell">Loading accounts…</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </article>
+            </div>
+          </section>
         </div>
       </section>
     </main>
