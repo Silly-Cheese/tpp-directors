@@ -13,6 +13,20 @@ function installProductionStyles() {
   document.head.append(link);
 }
 
+function installFounderSetupLink() {
+  if (document.querySelector("#founder-first-run-link")) return;
+  const loginForm = document.querySelector("#login-form");
+  if (!loginForm) return;
+  const link = document.createElement("a");
+  link.id = "founder-first-run-link";
+  link.href = "./founder-setup.html";
+  link.textContent = "First-time Founder setup";
+  link.style.cssText = "display:block;margin-top:10px;text-align:center;color:#2f67bd;font-size:12px;font-weight:750;text-decoration:none;";
+  link.addEventListener("mouseenter", () => { link.style.textDecoration = "underline"; });
+  link.addEventListener("mouseleave", () => { link.style.textDecoration = "none"; });
+  loginForm.append(link);
+}
+
 function safeMessage(value) {
   return String(value || "Unknown runtime error").replace(/[\r\n]+/g, " ").slice(0, 500);
 }
@@ -85,8 +99,15 @@ window.addEventListener("unhandledrejection", (event) => {
 window.addEventListener("tpp:module-status", renderBanner);
 
 installProductionStyles();
-if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", renderBanner, { once: true });
-else renderBanner();
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", () => {
+    installFounderSetupLink();
+    renderBanner();
+  }, { once: true });
+} else {
+  installFounderSetupLink();
+  renderBanner();
+}
 
 export function getRuntimeHealth() {
   return {
