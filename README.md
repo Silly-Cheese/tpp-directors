@@ -11,7 +11,7 @@ Private governance portal for The Prayer Project Board of Directors.
 - **Firebase services allowed:** Authentication and Cloud Firestore only
 - **Firebase Hosting / Storage / Functions:** Not used
 - **Manual/composite Firestore indexes:** Not used
-- **File uploads:** None. Official Board documents and minutes remain Google Docs / Drive / Sheets / Slides links.
+- **File uploads:** None. Official Board documents, minutes, charters, COI forms, officer records, task attachments, and compliance sources remain Google Docs / Drive / Sheets / Slides links.
 
 ## Phase status
 
@@ -21,7 +21,7 @@ Static GitHub Pages application, Firebase connection, protected Founder root mod
 
 ### Phase 2 — Accounts, PIN Authentication & Permissions: CODE COMPLETE
 
-Founder-created Board accounts, Full Name + four-digit PIN experience, activation codes, permission templates plus individual capabilities, protected Founder root identity, recovery flows, and administrative audit records.
+Founder-created Board accounts, Full Name + four-digit PIN experience, activation codes, granular permissions, protected Founder root identity, recovery flows, and administrative audit records.
 
 ### Phase 3 — Director Dashboard & Board Directory: COMPLETE
 
@@ -29,7 +29,7 @@ Operational dashboard, Board-facing director directory separated from secure acc
 
 ### Phase 4 — Board Document Center & Board Inbox: COMPLETE
 
-Google-link-only Board document submissions, access scopes, review lifecycle, Board Inbox, Agenda Ready handoff, revision history, and mutation-bound append-only document events.
+Google-link-only Board document submissions, access scopes, review lifecycle, Board Inbox, Agenda Ready handoff, revision history, and append-only document events.
 
 ### Phase 5 — Board Meetings, Check-In, Attendance & Quorum: POLISHED / CODE COMPLETE
 
@@ -37,48 +37,52 @@ Live Meeting Room, scheduled meetings, invited/voting roster snapshots, check-in
 
 ### Phase 6 — Agenda, Motions, Live Voting & Resolution Registry: FINISHED / CODE COMPLETE
 
+Live agendas, motions/seconds, vote-level recusals, pushed approve/oppose/abstain ballots, recorded/confidential modes, threshold rules, deterministic immutable ballots, portal-wide **VOTE NOW** alerts, one-active-vote meeting lock, `open -> closing -> closed` vote lifecycle, closing recovery, preliminary `BR-YYYY-XXXXXX` resolutions, and the Resolution Registry.
+
+### Phase 7 — Minutes, Certification & Permanent Board Records: FINISHED / CODE COMPLETE
+
 Implemented and hardened:
 
-- live agendas and Agenda Ready Google-document attachment;
-- present voting-eligible motions and seconds;
-- vote-level recusals;
-- approve / oppose / abstain ballots;
-- recorded and confidential ballot modes;
-- simple-majority, majority-of-eligible, and two-thirds thresholds;
-- immutable deterministic ballot records;
-- portal-wide **VOTE NOW** alerts;
-- corrected per-vote recorded-ballot audit;
-- one `activeVoteId` lock per meeting;
-- atomic prevention of overlapping pushed votes;
-- vote lifecycle `open -> closing -> closed` so ballot intake freezes before tally finalization;
-- meeting recess/adjourn protection while a vote is active;
-- automatic preliminary `BR-YYYY-XXXXXX` resolution records;
-- Resolution Registry;
+- Google-linked official minutes;
+- structured minutes metadata;
+- `draft -> ready -> certified` lifecycle;
+- separate minutes and record-certification permissions;
+- return-to-draft correction before certification;
+- deterministic `meetingMinutes/{meetingId}` records;
+- immutable `meetingRecords/{meetingId}` master records;
+- `BMR-YYYY-XXXXXX` permanent record numbers;
+- immutable attendance/agenda/motion/vote/resolution/recusal snapshots;
+- confidential ballot choices excluded from permanent snapshots;
+- resolution certification in the same record-sealing batch;
+- meeting-level record seal without rewriting historical `adjourned` status;
+- immutable certification event;
+- searchable/print-friendly **Board Records** section;
+- certification preflight that blocks active agenda business, voting motions, unfinished votes, or an occupied active-vote lock;
+- explicit warning before sealing a record that still contains unresolved `pending_second` or `ready` motions;
+- Phase 7 QA harness;
 - no manual/composite indexes.
 
-### Phase 7 — Minutes, Certification & Permanent Board Records: CODE COMPLETE
+### Phase 8 — Governance Operations Suite: CODE COMPLETE
 
 Implemented:
 
-- Google-linked official minutes;
-- structured minutes metadata inside the portal;
-- `draft -> ready -> certified` minutes lifecycle;
-- separate `minutes.view`, `minutes.edit`, `minutes.certify`, `records.view`, and `records.certify` capabilities;
-- minutes readiness only after adjournment;
-- return-to-draft correction workflow before certification;
-- deterministic `meetingMinutes/{meetingId}` records;
-- immutable `meetingRecords/{meetingId}` certified master records;
-- `BMR-YYYY-XXXXXX` permanent record numbers;
-- immutable typed `meetingRecordEntries` snapshots;
-- preserved attendance, agenda, motions, votes, resolutions, and recusals;
-- confidential ballot choices excluded from the permanent snapshot while original immutable ballots retain Phase 6 access controls;
-- resolution certification in the same atomic record-sealing batch;
-- meeting-level record seal without changing historical `adjourned` meeting status;
-- immutable certification event;
-- searchable **Board Records** portal section;
-- print-friendly certified record view;
-- Phase 7 browser QA harness;
-- consolidated Phase 1–7 Firestore Security Rules;
+- unified **Governance** portal section;
+- standing / ad hoc / special committee management;
+- committee chairs, members, purpose, status, charter Google link, and dates;
+- annual director conflict-of-interest disclosures using Google links;
+- Board-wide COI review workflow with `reviewed` / `renewal_required` states;
+- specific conflict / recusal / management-plan records;
+- private ordinary-director COI visibility with reviewer/Founder Board-wide access;
+- historical officer-term records with election / appointment / interim / confirmation basis;
+- protected officer-role synchronization to the director account and Board directory;
+- Founder-root protection during officer changes;
+- Board task creation, assignment, due dates, priorities, committee/meeting/resolution links, and self-service completion updates;
+- compliance items with categories, due dates, recurrence, ownership, Google-source links, and completed/waived states;
+- derived Overdue / Due Today / Due Soon / Upcoming display states without scheduled backend jobs;
+- append-only Phase 8 governance events;
+- Phase 8 granular permissions and updated role templates;
+- Phase 8 Firestore Security Rules;
+- Phase 8 browser QA harness;
 - no manual/composite indexes.
 
 **External production verification is still required** after GitHub Pages, Firebase Authentication, DNS, Founder bootstrap, and the current Firestore Security Rules are configured/deployed. That is deployment work rather than unfinished generation.
@@ -91,9 +95,9 @@ Implemented:
 4. **Google-link document center & Board Inbox — complete**
 5. **Meetings, activation, live check-in, attendance and quorum — polished / code complete**
 6. **Agenda, motions, resolutions and live voting — finished / code complete**
-7. **Minutes, certifications and permanent Board records — code complete**
-8. Committees, conflicts, officer management, tasks and compliance
-9. Founder Director administration, audit and security controls
+7. **Minutes, certifications and permanent Board records — finished / code complete**
+8. **Committees, conflicts, officer management, tasks and compliance — code complete**
+9. Founder Director administration, consolidated audit and security controls
 10. Operational hardening, production testing and launch
 
 ## Security principles
@@ -103,16 +107,20 @@ Implemented:
 - Other accounts receive granular Founder-assigned capabilities.
 - PINs and activation codes are never stored in Firestore.
 - Firebase Storage and Functions are not used.
-- Board files remain Google-hosted links.
+- All Board files remain Google-hosted links.
 - Google sharing permissions remain independent from portal authorization.
 - Attendance becomes immutable after adjournment/cancellation.
 - A meeting may own only one active pushed vote at a time.
 - Ballots stop accepting writes before vote totals are finalized.
 - Ballots are deterministic per vote/director and cannot be updated or deleted after submission.
-- Confidential ballots are not represented as cryptographically anonymous.
-- Preliminary resolutions become certified only when the permanent meeting record is sealed.
+- Confidential ballots are confidential, not represented as cryptographically anonymous.
 - Certified meeting records and certified record entries cannot be rewritten or deleted through the portal rules.
-- Portal certification is a record-locking workflow; it does not invent legal authority or replace any approval required by governing documents or applicable law.
+- Committee membership does not alter legal Board membership.
+- COI self-service access is limited to the authenticated director's own disclosure/conflict records unless review/manage authority is granted.
+- `officers.manage` can change only current officer-role metadata on ordinary director accounts; it cannot change root/system role, login identity, Board status, voting eligibility, or general permissions.
+- Delegated officer managers cannot modify the Founder root account. Founder-root officer changes require the authenticated Founder.
+- Assigned directors may update their own task progress without silently changing ownership or task authority.
+- Portal workflows enforce the configured data model but do not invent legal governance authority absent from governing documents or applicable law.
 - No bootstrap secret is embedded in the public GitHub Pages client.
 - No manual/composite Firestore indexes are defined or deployed.
 
@@ -131,23 +139,30 @@ agendaItems           live meeting agenda records
 motions               mover / seconder / motion lifecycle
 votes                 pushed vote definitions and result totals
 voteBallots           immutable per-voter ballots
-voteRecusals          vote-level recusals
+voteRecusals          vote-level meeting recusals
 resolutions           preliminary/certified Board resolutions
 meetingMinutes        Google-linked structured minutes metadata
 meetingRecords        immutable certified meeting master records
 meetingRecordEntries  immutable certified source snapshots
 recordEvents          permanent record-certification events
-system                Founder-only counters/config foundation
-auditEvents           administrative audit records
+committees             Phase 8 committee records
+coiDisclosures         annual director COI disclosures
+conflictRecords        specific conflict / recusal / management records
+officerTerms           historical Board officer assignments
+boardTasks             Board follow-up assignments
+complianceItems        governance/compliance obligations
+governanceEvents       append-only Phase 8 operational history
+system                 Founder-only counters/config foundation
+auditEvents            administrative audit records
 ```
 
-Future Phase 8+ governance collections remain deny-by-default until implemented.
+Future Phase 9+ collections remain deny-by-default until implemented.
 
 ## No manual/composite indexes
 
 There is intentionally no `firestore.indexes.json`.
 
-Phases 1–7 use direct document reads, authorized plain collection reads, or one single-field equality / `array-contains` filter at a time. Sorting, searching, quorum math, vote thresholds, record summaries, and other aggregation remain client-side.
+Phases 1–8 use direct document reads, authorized plain collection reads, or one single-field equality / `array-contains` filter at a time. Sorting, searching, quorum math, vote thresholds, due-state calculations, record summaries, and governance dashboard metrics remain client-side.
 
 Deploy rules only:
 
@@ -158,11 +173,9 @@ firebase deploy --only firestore:rules
 
 `firebase.json` references only `firestore.rules`.
 
-## Serverless quorum boundary
+## Serverless boundaries
 
-The portal intentionally uses GitHub Pages + Firebase Authentication + Cloud Firestore only. The live client calculates meeting-wide quorum from Phase 5 attendance and preserves the quorum snapshot with each vote. Firestore Rules validate each ballot against the frozen vote eligibility and the voter's current present attendance record, but there is no trusted server-side aggregation service.
-
-Phase 7 preserves the meeting attendance data and quorum snapshots in the certified record for audit.
+The portal intentionally uses GitHub Pages + Firebase Authentication + Cloud Firestore only. Meeting-wide quorum is calculated from Phase 5 attendance in the live client and preserved with each vote; Firestore Rules validate individual ballot eligibility and presence. Phase 8 compliance due-state labels are calculated when the portal is used rather than by a scheduled backend worker.
 
 ## Project documentation
 
@@ -173,6 +186,7 @@ Phase 7 preserves the meeting attendance data and quorum snapshots in the certif
 - `docs/PHASE-5-MEETINGS.md`
 - `docs/PHASE-6-LIVE-ACTIONS.md`
 - `docs/PHASE-7-PERMANENT-RECORDS.md`
+- `docs/PHASE-8-GOVERNANCE-OPS.md`
 - `docs/FOUNDER-BOOTSTRAP.md`
 - `docs/DEPLOYMENT.md`
 
@@ -184,6 +198,7 @@ Phase 7 preserves the meeting attendance data and quorum snapshots in the certif
 /tests/phase5-meetings.html
 /tests/phase6-governance.html
 /tests/phase7-records.html
+/tests/phase8-governance.html
 ```
 
 Serve the repository over HTTP before opening the harnesses:
