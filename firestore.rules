@@ -1,0 +1,46 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function ownDirectorRecord() {
+      return /databases/$(database)/documents/directors/$(request.auth.uid);
+    }
+
+    function hasDirectorRecord() {
+      return signedIn() && exists(ownDirectorRecord());
+    }
+
+    function currentDirector() {
+      return get(ownDirectorRecord()).data;
+    }
+
+    function activeDirector() {
+      return hasDirectorRecord()
+        && currentDirector().accountStatus == 'active';
+    }
+
+    function founderDirector() {
+      return activeDirector()
+        && currentDirector().systemRole == 'founder_director'
+        && currentDirector().root == true;
+    }
+
+    // Phase 1: directors may read only their own active profile.
+    // Founder Director may read director records for administration.
+    match /directors/{directorId} {
+      allow read: if activeDirector()
+        && (request.auth.uid == directorId || founderDirector());
+      allow create, update, delete: if false;
+    }
+
+    // All governance collections remain closed until their Phase-specific
+    // rules are implemented. This prevents an unfinished UI from creating
+    // an unintended authorization path.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
