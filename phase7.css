@@ -1,0 +1,191 @@
+.phase7-minutes-host,
+.phase7-records-shell { margin-top: 22px; }
+
+.phase7-minutes-host {
+  border-top: 1px solid rgba(15, 23, 42, .1);
+  padding-top: 22px;
+}
+
+.phase7-minutes-head,
+.phase7-record-detail-head,
+.phase7-record-actions,
+.phase7-certification-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.phase7-minutes-head h2,
+.phase7-record-detail-head h2 { margin: 2px 0 6px; }
+
+.phase7-record-status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 30px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  font-size: .75rem;
+  font-weight: 800;
+  letter-spacing: .06em;
+  background: rgba(15, 23, 42, .07);
+}
+
+.phase7-record-status.certified { background: rgba(22, 101, 52, .12); }
+.phase7-record-status.working { background: rgba(146, 64, 14, .11); }
+
+.phase7-minutes-form {
+  display: grid;
+  gap: 14px;
+  margin-top: 18px;
+  padding: 18px;
+  border: 1px solid rgba(15, 23, 42, .1);
+  border-radius: 16px;
+  background: rgba(255,255,255,.72);
+}
+
+.phase7-minutes-form label,
+.phase7-record-toolbar label {
+  display: grid;
+  gap: 6px;
+  font-weight: 700;
+  font-size: .9rem;
+}
+
+.phase7-minutes-form input,
+.phase7-minutes-form textarea,
+.phase7-record-toolbar input {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid rgba(15, 23, 42, .16);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font: inherit;
+  background: #fff;
+}
+
+.phase7-minutes-form small { color: #667085; }
+.phase7-actions { display: flex; justify-content: flex-end; }
+
+.phase7-actions button,
+.phase7-certify-button,
+.phase7-record-actions button,
+.phase7-record-actions a {
+  border: 0;
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-weight: 800;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.phase7-actions button,
+.phase7-record-actions button,
+.phase7-record-actions a { background: #172033; color: #fff; }
+.phase7-certify-button { background: #0f5132; color: #fff; }
+
+.phase7-certification-actions {
+  justify-content: flex-start;
+  flex-wrap: wrap;
+  margin-top: 16px;
+}
+
+.phase7-minutes-readonly {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.phase7-minutes-readonly > div,
+.phase7-record-metrics > div {
+  padding: 14px;
+  border: 1px solid rgba(15, 23, 42, .1);
+  border-radius: 14px;
+  background: rgba(255,255,255,.78);
+}
+
+.phase7-minutes-readonly span,
+.phase7-record-metrics span { display: block; color: #667085; font-size: .78rem; }
+.phase7-minutes-readonly strong,
+.phase7-record-metrics strong { display: block; margin-top: 4px; font-size: 1.08rem; }
+.phase7-minutes-readonly a { align-self: center; font-weight: 800; }
+.phase7-warning { margin-top: 14px; padding: 12px 14px; border-radius: 12px; background: rgba(153, 27, 27, .08); font-weight: 700; }
+
+.phase7-record-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin: 20px 0;
+}
+
+.phase7-record-toolbar { max-width: 520px; margin-bottom: 16px; }
+
+.phase7-record-layout {
+  display: grid;
+  grid-template-columns: minmax(260px, .72fr) minmax(0, 1.6fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.phase7-record-list { display: grid; gap: 10px; }
+.phase7-record-card {
+  width: 100%;
+  text-align: left;
+  border: 1px solid rgba(15, 23, 42, .1);
+  border-radius: 14px;
+  padding: 14px;
+  background: rgba(255,255,255,.8);
+  cursor: pointer;
+}
+.phase7-record-card.selected { outline: 2px solid rgba(15, 81, 50, .45); }
+.phase7-record-card div { display: grid; gap: 4px; }
+.phase7-record-card span,
+.phase7-record-card small { color: #667085; }
+
+.phase7-record-detail { min-height: 280px; }
+.phase7-record-actions { justify-content: flex-start; margin: 16px 0; flex-wrap: wrap; }
+.phase7-minutes-snapshot { margin: 18px 0; padding: 16px; border-radius: 14px; background: rgba(15, 23, 42, .04); }
+.phase7-minutes-snapshot h3 { margin-top: 0; }
+.phase7-minutes-snapshot span { color: #667085; }
+
+.phase7-entry-group { margin-top: 20px; }
+.phase7-entry-group h3 { margin-bottom: 9px; }
+.phase7-entry {
+  padding: 12px 0;
+  border-bottom: 1px solid rgba(15, 23, 42, .08);
+}
+.phase7-entry:last-child { border-bottom: 0; }
+.phase7-entry strong,
+.phase7-entry span,
+.phase7-entry p { display: block; }
+.phase7-entry span { margin-top: 4px; color: #667085; }
+.phase7-entry p { margin: 6px 0; }
+.phase7-empty { padding: 18px; color: #667085; text-align: center; }
+
+@media (max-width: 900px) {
+  .phase7-record-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .phase7-record-layout { grid-template-columns: 1fr; }
+  .phase7-minutes-readonly { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 620px) {
+  .phase7-minutes-head,
+  .phase7-record-detail-head { align-items: flex-start; flex-direction: column; }
+  .phase7-record-metrics { grid-template-columns: 1fr; }
+}
+
+@media print {
+  .sidebar,
+  .portal-topbar,
+  .nav-item,
+  #phase7-record-list,
+  .phase7-record-toolbar,
+  .phase7-record-metrics,
+  .phase7-record-actions,
+  footer { display: none !important; }
+  #view-records,
+  #phase7-record-detail { display: block !important; border: 0 !important; box-shadow: none !important; }
+  .portal-main { width: 100% !important; margin: 0 !important; padding: 0 !important; }
+}
