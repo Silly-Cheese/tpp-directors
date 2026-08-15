@@ -15,6 +15,17 @@ let openVote = null;
 let ownBallot = null;
 let initialized = false;
 
+function installAlertStyle() {
+  if (document.querySelector("#phase6-vote-alert-style")) return;
+  const style = document.createElement("style");
+  style.id = "phase6-vote-alert-style";
+  style.textContent = `
+    .phase6-vote-alert{display:flex;align-items:center;justify-content:space-between;gap:1rem;margin:0 0 1rem;padding:.9rem 1rem;border:1px solid #e8be65;border-radius:14px;background:#fff8e8;box-shadow:0 8px 24px rgba(46,36,10,.08)}
+    .phase6-vote-alert[hidden]{display:none}.phase6-vote-alert>div{display:grid;gap:.12rem}.phase6-vote-alert span{font-size:.7rem;font-weight:900;letter-spacing:.1em;color:#8d5a00}.phase6-vote-alert strong{color:#392b0b}.phase6-vote-alert small{color:#745f31}.phase6-vote-alert button{border:0;border-radius:10px;padding:.7rem .85rem;background:#72500a;color:#fff;font:inherit;font-weight:800;cursor:pointer;white-space:nowrap}.phase6-vote-alert.recorded{border-color:#a9d6b7;background:#edf9f1}.phase6-vote-alert.recorded span{color:#2f7046}.phase6-vote-alert.recorded button{background:#2e6a43}@media(max-width:680px){.phase6-vote-alert{align-items:stretch;flex-direction:column}.phase6-vote-alert button{width:100%}}
+  `;
+  document.head.append(style);
+}
+
 function ensureAlert() {
   if (document.querySelector("#phase6-vote-alert")) return document.querySelector("#phase6-vote-alert");
   const main = document.querySelector(".portal-main");
@@ -109,6 +120,7 @@ function teardown() {
 function init() {
   if (initialized) return;
   initialized = true;
+  installAlertStyle();
   onAuthStateChanged(auth, async (user) => {
     if (!user) return teardown();
     const nextProfile = await loadProfile(user.uid);
