@@ -13,10 +13,7 @@
     <header class="site-header">
       <a class="brand" href="./" aria-label="The Prayer Project Board of Directors Portal">
         <span class="brand-mark" aria-hidden="true">TPP</span>
-        <span>
-          <strong>The Prayer Project</strong>
-          <small>Board of Directors Portal</small>
-        </span>
+        <span><strong>The Prayer Project</strong><small>Board of Directors Portal</small></span>
       </a>
       <span class="environment-badge">Governance System</span>
     </header>
@@ -26,80 +23,39 @@
         <div class="login-copy">
           <p class="eyebrow">BOARD GOVERNANCE</p>
           <h1 id="login-title">Director access starts here.</h1>
-          <p>This private portal manages Board identity, permissions, director records, notices, meetings, voting, documents, resolutions, and permanent governance records.</p>
-          <div class="status-card">
-            <span class="status-dot" aria-hidden="true"></span>
-            <div>
-              <strong>Director account system active</strong>
-              <span>Board accounts are created by the Founder Director. Directors identify themselves by full name and use a four-digit PIN after first activation.</span>
-            </div>
-          </div>
+          <p>This private portal manages Board identity, director records, Google-linked documents, notices, meetings, voting, resolutions, and permanent governance records.</p>
+          <div class="status-card"><span class="status-dot"></span><div><strong>Board workspace active</strong><span>Accounts are Founder-created. Directors sign in with their full name and four-digit PIN after first activation.</span></div></div>
         </div>
 
         <div class="login-card" aria-label="Director sign in">
-          <div class="card-heading">
-            <p class="eyebrow">DIRECTOR SIGN IN</p>
-            <h2>Board Portal</h2>
-            <p id="login-instructions">Enter your full name to continue.</p>
-          </div>
-
+          <div class="card-heading"><p class="eyebrow">DIRECTOR SIGN IN</p><h2>Board Portal</h2><p id="login-instructions">Enter your full name to continue.</p></div>
           <form id="login-form" novalidate>
-            <div id="name-field" class="field-group">
-              <label for="full-name">Full name</label>
-              <input id="full-name" name="fullName" autocomplete="name" placeholder="Enter your full name" required>
-            </div>
-
-            <div id="activation-field" class="field-group" hidden>
-              <label for="activation-code">Activation code</label>
-              <input id="activation-code" name="activationCode" autocomplete="one-time-code" inputmode="text" maxlength="14" placeholder="XXXX-XXXX-XXXX">
-              <small>Your one-time activation code is provided by the Founder Director.</small>
-            </div>
-
-            <div id="pin-field" class="field-group" hidden>
-              <label for="pin">4-digit PIN</label>
-              <input id="pin" name="pin" inputmode="numeric" autocomplete="current-password" pattern="[0-9]{4}" maxlength="4" placeholder="••••">
-            </div>
-
+            <div id="name-field" class="field-group"><label for="full-name">Full name</label><input id="full-name" name="fullName" autocomplete="name" placeholder="Enter your full name" required></div>
+            <div id="activation-field" class="field-group" hidden><label for="activation-code">Activation code</label><input id="activation-code" name="activationCode" autocomplete="one-time-code" maxlength="14" placeholder="XXXX-XXXX-XXXX"><small>Your one-time activation code is provided by the Founder Director.</small></div>
+            <div id="pin-field" class="field-group" hidden><label for="pin">4-digit PIN</label><input id="pin" name="pin" inputmode="numeric" autocomplete="current-password" pattern="[0-9]{4}" maxlength="4" placeholder="••••"></div>
             <button id="continue-button" type="submit">Continue</button>
             <button id="activation-recovery-button" class="text-button" type="button" hidden>I already created my PIN</button>
             <button id="login-back-button" class="text-button" type="button" hidden>Use a different name</button>
             <p id="login-message" class="form-message" role="status"></p>
           </form>
 
-          <form id="pin-setup-form" class="pin-setup-form" hidden novalidate>
-            <div class="setup-banner">
-              <span>ACCOUNT ACTIVATION</span>
-              <strong id="pin-setup-name">Director</strong>
-              <small>Create the four-digit PIN you will use for future Board Portal sign-ins.</small>
-            </div>
-            <label for="new-pin">New 4-digit PIN</label>
-            <input id="new-pin" name="newPin" inputmode="numeric" autocomplete="new-password" pattern="[0-9]{4}" maxlength="4" placeholder="••••" required>
-            <label for="confirm-pin">Confirm PIN</label>
-            <input id="confirm-pin" name="confirmPin" inputmode="numeric" autocomplete="new-password" pattern="[0-9]{4}" maxlength="4" placeholder="••••" required>
-            <button id="save-pin-button" type="submit">Activate Board Account</button>
-            <p id="pin-setup-message" class="form-message" role="status"></p>
+          <form id="pin-setup-form" hidden novalidate>
+            <div class="setup-banner"><span>ACCOUNT ACTIVATION</span><strong id="pin-setup-name">Director</strong><small>Create the four-digit PIN you will use for future Board Portal sign-ins.</small></div>
+            <label for="new-pin">New 4-digit PIN</label><input id="new-pin" name="newPin" inputmode="numeric" autocomplete="new-password" pattern="[0-9]{4}" maxlength="4" placeholder="••••" required>
+            <label for="confirm-pin">Confirm PIN</label><input id="confirm-pin" name="confirmPin" inputmode="numeric" autocomplete="new-password" pattern="[0-9]{4}" maxlength="4" placeholder="••••" required>
+            <button id="save-pin-button" type="submit">Activate Board Account</button><p id="pin-setup-message" class="form-message" role="status"></p>
           </form>
-
-          <div class="security-note">
-            <strong>Authorized Board access only.</strong>
-            <span>Portal access and administrative actions may be recorded. Your four-digit PIN is never stored in Cloud Firestore.</span>
-          </div>
+          <div class="security-note"><strong>Authorized Board access only.</strong><span>Portal actions may be recorded. PINs and activation codes are never stored in Cloud Firestore.</span></div>
         </div>
       </section>
 
       <section id="signed-in-view" class="portal-view" hidden>
         <aside class="sidebar">
-          <div class="sidebar-title">
-            <span class="brand-mark small">TPP</span>
-            <div>
-              <strong id="account-name">Board Portal</strong>
-              <small id="account-role">Director</small>
-            </div>
-          </div>
+          <div class="sidebar-title"><span class="brand-mark small">TPP</span><div><strong id="account-name">Board Portal</strong><small id="account-role">Director</small></div></div>
           <nav aria-label="Board portal navigation">
             <button class="nav-item active" type="button" data-view="overview">Overview</button>
-            <button class="nav-item" type="button" data-view="meetings">Meetings</button>
             <button class="nav-item" type="button" data-view="documents">Board Documents</button>
+            <button class="nav-item" type="button" data-view="meetings">Meetings</button>
             <button class="nav-item" type="button" data-view="resolutions">Resolutions</button>
             <button class="nav-item" type="button" data-view="directors">Directors</button>
             <button class="nav-item founder-only" type="button" data-view="founder" hidden>Founder Control</button>
@@ -107,340 +63,91 @@
         </aside>
 
         <div class="portal-main">
-          <div class="portal-topbar">
-            <div>
-              <p class="eyebrow">BOARD OF DIRECTORS</p>
-              <h1 id="view-title">Governance Overview</h1>
-            </div>
-            <button id="sign-out-button" class="secondary-button" type="button">Sign out</button>
-          </div>
+          <div class="portal-topbar"><div><p class="eyebrow">BOARD OF DIRECTORS</p><h1 id="view-title">Governance Overview</h1></div><button id="sign-out-button" class="secondary-button" type="button">Sign out</button></div>
 
           <section id="view-overview" class="portal-section">
             <div class="metric-grid">
               <article class="metric"><span>Current Directors</span><strong id="board-total-metric">—</strong><small>Current interim, confirmed, and leave-status Board members.</small></article>
-              <article class="metric"><span>Confirmed</span><strong id="board-confirmed-metric">—</strong><small>Directors formally marked confirmed in the Board directory.</small></article>
-              <article class="metric"><span>Interim</span><strong id="board-interim-metric">—</strong><small>Directors awaiting formal confirmation.</small></article>
+              <article class="metric"><span>Confirmed</span><strong id="board-confirmed-metric">—</strong><small>Directors marked confirmed in the Board directory.</small></article>
+              <article class="metric"><span>Document Inbox</span><strong id="document-inbox-metric">—</strong><small id="document-inbox-caption">Board document activity available to your account.</small></article>
               <article class="metric"><span>Account</span><strong id="account-status-metric">Active</strong><small id="account-number-metric">Board identity verified.</small></article>
             </div>
 
             <div class="dashboard-grid">
-              <article class="panel">
-                <div class="panel-heading"><div><p class="eyebrow">YOUR PROFILE</p><h2>Board identity</h2></div></div>
-                <dl class="detail-list">
-                  <div><dt>Director</dt><dd id="profile-name">—</dd></div>
-                  <div><dt>Director number</dt><dd id="profile-director-number">—</dd></div>
-                  <div><dt>Board role</dt><dd id="profile-board-role">—</dd></div>
-                  <div><dt>Officer role</dt><dd id="profile-officer-role">—</dd></div>
-                  <div><dt>Board status</dt><dd id="profile-board-status">—</dd></div>
-                  <div><dt>Voting status</dt><dd id="profile-voting-status">—</dd></div>
-                  <div><dt>Term</dt><dd id="profile-term">—</dd></div>
-                </dl>
-              </article>
+              <article class="panel"><div class="panel-heading"><div><p class="eyebrow">YOUR PROFILE</p><h2>Board identity</h2></div></div><dl class="detail-list">
+                <div><dt>Director</dt><dd id="profile-name">—</dd></div><div><dt>Director number</dt><dd id="profile-director-number">—</dd></div><div><dt>Board role</dt><dd id="profile-board-role">—</dd></div><div><dt>Officer role</dt><dd id="profile-officer-role">—</dd></div><div><dt>Board status</dt><dd id="profile-board-status">—</dd></div><div><dt>Voting status</dt><dd id="profile-voting-status">—</dd></div><div><dt>Term</dt><dd id="profile-term">—</dd></div>
+              </dl></article>
+              <article class="panel"><div class="panel-heading"><div><p class="eyebrow">BOARD NOTICES</p><h2>What needs your attention</h2></div></div><div id="dashboard-notices" class="notice-list"><div class="empty-state">Loading Board notices…</div></div></article>
+              <article class="panel"><div class="panel-heading"><div><p class="eyebrow">DOCUMENTS</p><h2>Recent Board documents</h2></div><button class="table-action" type="button" data-open-view="documents">Open center</button></div><div id="dashboard-document-list" class="compact-list"><div class="empty-state">Loading documents…</div></div></article>
+              <article class="panel"><div class="panel-heading"><div><p class="eyebrow">PORTAL ACCESS</p><h2>Your permissions</h2></div></div><p class="panel-copy">Portal permissions are assigned by the Founder Director. Corporate authority continues to come from governing documents and valid Board actions.</p><div id="profile-permissions" class="chip-list"></div></article>
+              <article class="panel"><div class="panel-heading"><div><p class="eyebrow">ACCOUNT SECURITY</p><h2>Change your PIN</h2></div></div><form id="change-pin-form" class="admin-form compact-form" novalidate><label for="change-pin-new">New 4-digit PIN</label><input id="change-pin-new" name="newPin" inputmode="numeric" autocomplete="new-password" pattern="[0-9]{4}" maxlength="4" placeholder="••••" required><label for="change-pin-confirm">Confirm new PIN</label><input id="change-pin-confirm" name="confirmPin" inputmode="numeric" autocomplete="new-password" pattern="[0-9]{4}" maxlength="4" placeholder="••••" required><button type="submit">Change PIN</button><p id="change-pin-message" class="form-message" role="status"></p></form></article>
+            </div>
+          </section>
 
-              <article class="panel">
-                <div class="panel-heading"><div><p class="eyebrow">BOARD NOTICES</p><h2>What needs your attention</h2></div></div>
-                <div id="dashboard-notices" class="notice-list">
-                  <div class="empty-state">Loading Board notices…</div>
-                </div>
-              </article>
+          <section id="view-documents" class="portal-section" hidden>
+            <div class="section-heading-row"><div><p class="eyebrow">BOARD DOCUMENT CENTER</p><h2>Governance documents & submissions</h2><p>Every document is represented by a Google Docs, Drive, Sheets, or Slides link. The portal never accepts file uploads.</p></div><div class="button-row"><button id="refresh-documents-button" class="secondary-button" type="button">Refresh</button><button id="open-submit-document" class="primary-button" type="button">Submit document</button></div></div>
 
-              <article class="panel">
-                <div class="panel-heading"><div><p class="eyebrow">PORTAL ACCESS</p><h2>Your permissions</h2></div></div>
-                <p class="panel-copy">Your portal access is assigned by the Founder Director. Governance authority itself still comes from the organization's governing documents and valid Board actions.</p>
-                <div id="profile-permissions" class="chip-list"></div>
-              </article>
-
-              <article class="panel">
-                <div class="panel-heading"><div><p class="eyebrow">ACCOUNT SECURITY</p><h2>Change your PIN</h2></div></div>
-                <form id="change-pin-form" class="admin-form compact-form" novalidate>
-                  <label for="change-pin-new">New 4-digit PIN</label>
-                  <input id="change-pin-new" name="newPin" inputmode="numeric" autocomplete="new-password" pattern="[0-9]{4}" maxlength="4" placeholder="••••" required>
-                  <label for="change-pin-confirm">Confirm new PIN</label>
-                  <input id="change-pin-confirm" name="confirmPin" inputmode="numeric" autocomplete="new-password" pattern="[0-9]{4}" maxlength="4" placeholder="••••" required>
-                  <button type="submit">Change PIN</button>
-                  <p id="change-pin-message" class="form-message" role="status"></p>
-                </form>
-              </article>
+            <div class="directory-metrics">
+              <div><span>Accessible</span><strong id="documents-accessible">0</strong></div><div><span>My Submissions</span><strong id="documents-mine">0</strong></div><div><span>Board Inbox</span><strong id="documents-inbox">0</strong></div><div><span>Agenda Ready</span><strong id="documents-agenda">0</strong></div>
             </div>
 
-            <article class="panel next-actions-panel">
-              <div class="panel-heading"><div><p class="eyebrow">BOARD WORKSPACE</p><h2>Upcoming governance modules</h2></div></div>
-              <div class="module-status-grid">
-                <div><strong>Board Documents</strong><span>Google-link submissions and Board Inbox arrive in Phase 4.</span></div>
-                <div><strong>Meetings & Check-In</strong><span>Live meeting activation, attendance, and quorum arrive in Phase 5.</span></div>
-                <div><strong>Votes & Resolutions</strong><span>Pushed Board votes and live actions arrive in Phase 6.</span></div>
-              </div>
+            <article id="document-inbox-panel" class="panel" hidden><div class="panel-heading"><div><p class="eyebrow">REVIEW QUEUE</p><h2>Board Inbox</h2></div><span id="document-inbox-badge" class="count-badge">0</span></div><div id="document-inbox-list" class="document-inbox-list"></div></article>
+
+            <article id="submit-document-panel" class="panel" hidden>
+              <div class="panel-heading"><div><p class="eyebrow">SUBMIT TO THE BOARD</p><h2>New Google-linked document</h2></div><button id="close-submit-document" class="secondary-button" type="button">Close</button></div>
+              <form id="submit-document-form" class="admin-form" novalidate>
+                <div class="form-row"><div><label for="document-title">Document title</label><input id="document-title" name="title" maxlength="160" required></div><div><label for="document-category">Category</label><select id="document-category" name="category"><option value="governance">Governance</option><option value="policy">Policy</option><option value="financial">Financial</option><option value="program">Program</option><option value="committee">Committee</option><option value="report">Report</option><option value="legal">Legal</option><option value="minutes">Minutes</option><option value="other">Other</option></select></div></div>
+                <label for="document-url">Google document link</label><input id="document-url" name="documentUrl" type="url" placeholder="https://docs.google.com/..." required><small class="field-help">Only HTTPS links from Google Docs, Drive, Sheets, or Slides are accepted.</small>
+                <label for="document-description">Description</label><textarea id="document-description" name="description" rows="4" maxlength="1200" required></textarea>
+                <label for="document-requested-action">Requested Board action</label><textarea id="document-requested-action" name="requestedAction" rows="2" maxlength="600" placeholder="Optional — e.g., review, approval, discussion, acknowledgement"></textarea>
+                <div class="form-row"><div><label for="document-access-scope">Who may access this record?</label><select id="document-access-scope" name="accessScope"><option value="board">Board of Directors</option><option value="officers">Board Officers</option><option value="restricted">Selected Directors</option><option value="founder">Founder Director Only</option></select></div><div class="policy-box"><strong>Google-link policy</strong><span>Sharing permissions on the Google document must also be configured correctly. Portal access does not override Google Drive permissions.</span></div></div>
+                <fieldset id="document-restricted-field" class="permission-fieldset" hidden><legend>Selected directors</legend><p>Choose which directors may access this restricted record in the portal.</p><div id="document-restricted-directors" class="permission-grid"></div></fieldset>
+                <button type="submit">Submit to Board Inbox</button><p id="submit-document-message" class="form-message" role="status"></p>
+              </form>
+            </article>
+
+            <div class="directory-toolbar document-toolbar"><label><span>Search documents</span><input id="document-search" type="search" placeholder="Title, number, submitter, category"></label><label><span>Status</span><select id="document-status-filter"><option value="active">Active records</option><option value="all">All accessible</option><option value="submitted">Submitted</option><option value="under_review">Under review</option><option value="returned_for_revision">Returned for revision</option><option value="agenda_ready">Agenda ready</option><option value="approved">Approved</option><option value="rejected">Rejected</option><option value="tabled">Tabled</option><option value="archived">Archived</option></select></label><label><span>Category</span><select id="document-category-filter"><option value="all">All categories</option><option value="governance">Governance</option><option value="policy">Policy</option><option value="financial">Financial</option><option value="program">Program</option><option value="committee">Committee</option><option value="report">Report</option><option value="legal">Legal</option><option value="minutes">Minutes</option><option value="other">Other</option></select></label></div>
+            <div id="document-list" class="document-grid"><div class="empty-state">Loading Board documents…</div></div>
+
+            <article id="document-detail-panel" class="panel detail-panel" hidden>
+              <div class="detail-header"><div><p class="eyebrow">DOCUMENT RECORD</p><h2 id="document-detail-title">Board Document</h2><span id="document-detail-number">BDOC</span></div><div class="button-row"><a id="document-detail-link" class="primary-button link-button" href="#" target="_blank" rel="noopener noreferrer">Open Google document</a><button id="close-document-detail" class="secondary-button" type="button">Close</button></div></div>
+              <div class="detail-columns"><dl class="detail-list"><div><dt>Status</dt><dd id="document-detail-status">—</dd></div><div><dt>Category</dt><dd id="document-detail-category">—</dd></div><div><dt>Link type</dt><dd id="document-detail-link-type">—</dd></div><div><dt>Submitted by</dt><dd id="document-detail-submitter">—</dd></div><div><dt>Access</dt><dd id="document-detail-access">—</dd></div><div><dt>Revision</dt><dd id="document-detail-revision">—</dd></div></dl><div><h3>Description</h3><p id="document-detail-description" class="long-copy">—</p><h3>Requested action</h3><p id="document-detail-requested" class="long-copy">—</p><div id="document-review-note-box" class="review-note-box" hidden><strong>Latest review note</strong><p id="document-detail-review-note"></p></div></div></div>
+
+              <div id="document-review-controls" class="review-controls" hidden><h3>Board review action</h3><textarea id="document-review-note" rows="3" placeholder="Review note — required when returning or rejecting"></textarea><div class="action-grid"><button type="button" data-document-action="begin_review">Begin Review</button><button type="button" data-document-action="return_revision">Return for Revision</button><button type="button" data-document-action="agenda_ready">Mark Agenda Ready</button><button type="button" data-document-action="approve">Approve Record</button><button type="button" data-document-action="table">Table</button><button type="button" data-document-action="reject">Reject</button><button type="button" data-document-action="archive">Archive</button></div><p id="document-review-message" class="form-message"></p></div>
+
+              <form id="document-revise-form" class="admin-form revision-form" hidden novalidate><h3>Revise & resubmit</h3><label for="revise-document-title">Title</label><input id="revise-document-title" name="title" required><label for="revise-document-url">Google document link</label><input id="revise-document-url" name="documentUrl" type="url" required><label for="revise-document-description">Description</label><textarea id="revise-document-description" name="description" rows="3" required></textarea><label for="revise-document-requested">Requested action</label><textarea id="revise-document-requested" name="requestedAction" rows="2"></textarea><button type="submit">Save Revision & Resubmit</button><p id="document-revise-message" class="form-message"></p></form>
+
+              <div class="history-block"><h3>Record history</h3><div id="document-history-list" class="timeline"><div class="empty-state">Loading history…</div></div></div>
             </article>
           </section>
 
           <section id="view-directors" class="portal-section" hidden>
-            <div class="section-heading-row">
-              <div>
-                <p class="eyebrow">BOARD DIRECTORY</p>
-                <h2>Directors of The Prayer Project</h2>
-                <p>The directory contains Board-facing governance information only. Authentication details and account-security records are never exposed here.</p>
-              </div>
-              <button id="refresh-directory-button" class="secondary-button" type="button">Refresh directory</button>
-            </div>
-
-            <div class="directory-metrics">
-              <div><span>Current Board</span><strong id="directory-total">0</strong></div>
-              <div><span>Confirmed</span><strong id="directory-confirmed">0</strong></div>
-              <div><span>Interim</span><strong id="directory-interim">0</strong></div>
-              <div><span>Voting Eligible</span><strong id="directory-voting">0</strong></div>
-            </div>
-
-            <div class="directory-toolbar">
-              <label>
-                <span>Search directors</span>
-                <input id="directory-search" type="search" placeholder="Name, role, or director number">
-              </label>
-              <label>
-                <span>Board status</span>
-                <select id="directory-status-filter">
-                  <option value="current">Current Board</option>
-                  <option value="all">All directory records</option>
-                  <option value="confirmed">Confirmed</option>
-                  <option value="interim">Interim</option>
-                  <option value="leave_of_absence">Leave of absence</option>
-                  <option value="former">Former directors</option>
-                </select>
-              </label>
-            </div>
-
-            <div id="directory-grid" class="directory-grid">
-              <div class="empty-state">Loading Board directory…</div>
-            </div>
-
-            <article id="directory-profile-panel" class="panel directory-profile-panel" hidden>
-              <div class="directory-profile-header">
-                <div id="directory-profile-avatar" class="director-avatar large">TPP</div>
-                <div>
-                  <p class="eyebrow">DIRECTOR PROFILE</p>
-                  <h2 id="directory-profile-name">Director</h2>
-                  <span id="directory-profile-number">DIR-000000</span>
-                </div>
-                <button id="close-directory-profile" class="secondary-button" type="button">Close</button>
-              </div>
-              <dl class="detail-list profile-detail-list">
-                <div><dt>Board role</dt><dd id="directory-profile-role">—</dd></div>
-                <div><dt>Officer role</dt><dd id="directory-profile-officer">—</dd></div>
-                <div><dt>Board status</dt><dd id="directory-profile-status">—</dd></div>
-                <div><dt>Voting status</dt><dd id="directory-profile-voting">—</dd></div>
-                <div><dt>Term</dt><dd id="directory-profile-term">—</dd></div>
-              </dl>
-            </article>
+            <div class="section-heading-row"><div><p class="eyebrow">BOARD DIRECTORY</p><h2>Directors of The Prayer Project</h2><p>Board-facing governance information only. Authentication and account-security details are never exposed here.</p></div><button id="refresh-directory-button" class="secondary-button" type="button">Refresh directory</button></div>
+            <div class="directory-metrics"><div><span>Current Board</span><strong id="directory-total">0</strong></div><div><span>Confirmed</span><strong id="directory-confirmed">0</strong></div><div><span>Interim</span><strong id="directory-interim">0</strong></div><div><span>Voting Eligible</span><strong id="directory-voting">0</strong></div></div>
+            <div class="directory-toolbar"><label><span>Search directors</span><input id="directory-search" type="search" placeholder="Name, role, or director number"></label><label><span>Board status</span><select id="directory-status-filter"><option value="current">Current Board</option><option value="all">All directory records</option><option value="confirmed">Confirmed</option><option value="interim">Interim</option><option value="leave_of_absence">Leave of absence</option><option value="former">Former directors</option></select></label></div>
+            <div id="directory-grid" class="directory-grid"><div class="empty-state">Loading Board directory…</div></div>
+            <article id="directory-profile-panel" class="panel detail-panel" hidden><div class="directory-profile-header"><div id="directory-profile-avatar" class="director-avatar large">TPP</div><div><p class="eyebrow">DIRECTOR PROFILE</p><h2 id="directory-profile-name">Director</h2><span id="directory-profile-number">DIR-000000</span></div><button id="close-directory-profile" class="secondary-button" type="button">Close</button></div><dl class="detail-list profile-detail-list"><div><dt>Board role</dt><dd id="directory-profile-role">—</dd></div><div><dt>Officer role</dt><dd id="directory-profile-officer">—</dd></div><div><dt>Board status</dt><dd id="directory-profile-status">—</dd></div><div><dt>Voting status</dt><dd id="directory-profile-voting">—</dd></div><div><dt>Term</dt><dd id="directory-profile-term">—</dd></div></dl></article>
           </section>
 
-          <section id="view-placeholder" class="portal-section" hidden>
-            <article class="panel placeholder-panel">
-              <p class="eyebrow">COMING IN A LATER PHASE</p>
-              <h2 id="placeholder-title">Board module</h2>
-              <p id="placeholder-copy">This module is intentionally closed until its security rules and governance workflow are implemented.</p>
-            </article>
-          </section>
+          <section id="view-placeholder" class="portal-section" hidden><article class="panel placeholder-panel"><p class="eyebrow">COMING IN A LATER PHASE</p><h2 id="placeholder-title">Board module</h2><p id="placeholder-copy">This module remains closed until its security rules and governance workflow are implemented.</p></article></section>
 
           <section id="view-founder" class="portal-section" hidden>
-            <div class="section-heading-row">
-              <div>
-                <p class="eyebrow">FOUNDER DIRECTOR</p>
-                <h2>Control Center</h2>
-                <p>Create Board accounts, manage director profiles and access, publish Board notices, and prepare account recovery. The root Founder account remains protected from ordinary account administration.</p>
-              </div>
-              <button id="refresh-directors-button" class="secondary-button" type="button">Refresh accounts</button>
-            </div>
-
-            <div class="directory-metrics founder-metrics">
-              <div><span>All Accounts</span><strong id="founder-total-count">0</strong></div>
-              <div><span>Active</span><strong id="founder-active-count">0</strong></div>
-              <div><span>Awaiting Activation</span><strong id="founder-awaiting-count">0</strong></div>
-              <div><span>Other / Restricted</span><strong id="founder-other-count">0</strong></div>
-            </div>
-
+            <div class="section-heading-row"><div><p class="eyebrow">FOUNDER DIRECTOR</p><h2>Control Center</h2><p>Create Board accounts, manage director profiles/access, publish notices, and prepare account recovery. The root Founder account remains protected.</p></div><button id="refresh-directors-button" class="secondary-button" type="button">Refresh accounts</button></div>
+            <div class="directory-metrics founder-metrics"><div><span>All Accounts</span><strong id="founder-total-count">0</strong></div><div><span>Active</span><strong id="founder-active-count">0</strong></div><div><span>Awaiting Activation</span><strong id="founder-awaiting-count">0</strong></div><div><span>Other / Restricted</span><strong id="founder-other-count">0</strong></div></div>
             <div class="founder-tools-grid">
-              <article class="panel">
-                <div class="panel-heading"><div><p class="eyebrow">CREATE ACCOUNT</p><h2>New Director</h2></div></div>
-                <form id="create-director-form" class="admin-form" novalidate>
-                  <label for="director-full-name">Full name</label>
-                  <input id="director-full-name" name="fullName" autocomplete="off" required>
-
-                  <div class="form-row">
-                    <div><label for="director-board-role">Board role</label><input id="director-board-role" name="boardRole" value="Director" required></div>
-                    <div><label for="director-officer-role">Officer role</label><input id="director-officer-role" name="officerRole" placeholder="Optional"></div>
-                  </div>
-
-                  <div class="form-row">
-                    <div>
-                      <label for="director-board-status">Board status</label>
-                      <select id="director-board-status" name="boardStatus">
-                        <option value="interim">Interim</option>
-                        <option value="confirmed">Confirmed</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label for="director-voting-status">Voting status</label>
-                      <select id="director-voting-status" name="votingStatus">
-                        <option value="eligible">Eligible</option>
-                        <option value="ineligible">Ineligible</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  <div class="form-row">
-                    <div><label for="director-term-start">Term start</label><input id="director-term-start" name="termStart" type="date"></div>
-                    <div><label for="director-term-end">Term end</label><input id="director-term-end" name="termEnd" type="date"></div>
-                  </div>
-
-                  <label for="director-permission-template">Permission template</label>
-                  <select id="director-permission-template" name="permissionTemplate"></select>
-
-                  <button type="submit">Create Board Account</button>
-                  <p id="create-director-message" class="form-message" role="status"></p>
-                </form>
-
-                <div id="activation-result" class="activation-result" hidden>
-                  <span>ACCOUNT CREATED</span>
-                  <strong id="activation-result-name">Director</strong>
-                  <p>Give this one-time activation code directly to the director. It is intentionally not saved in Firestore.</p>
-                  <code id="activation-result-code">XXXX-XXXX-XXXX</code>
-                  <div class="activation-actions">
-                    <button id="copy-activation-button" class="secondary-button" type="button">Copy code</button>
-                    <small id="activation-result-number">DIR-000000</small>
-                  </div>
-                </div>
-              </article>
-
-              <article class="panel">
-                <div class="panel-heading"><div><p class="eyebrow">BOARD NOTICE</p><h2>Publish announcement</h2></div></div>
-                <form id="board-notice-form" class="admin-form" novalidate>
-                  <label for="notice-title">Title</label>
-                  <input id="notice-title" name="title" maxlength="120" required>
-                  <label for="notice-body">Message</label>
-                  <textarea id="notice-body" name="body" rows="5" maxlength="1200" required></textarea>
-                  <div class="form-row">
-                    <div>
-                      <label for="notice-priority">Priority</label>
-                      <select id="notice-priority" name="priority">
-                        <option value="normal">Normal</option>
-                        <option value="important">Important</option>
-                        <option value="urgent">Urgent</option>
-                      </select>
-                    </div>
-                    <div><label for="notice-expires">Expires</label><input id="notice-expires" name="expiresOn" type="date"></div>
-                  </div>
-                  <button type="submit">Publish to Board</button>
-                  <p id="board-notice-message" class="form-message" role="status"></p>
-                </form>
-                <div class="notice-admin-section">
-                  <div class="mini-heading"><strong>Published notices</strong><button id="refresh-notices-button" class="text-button" type="button">Refresh</button></div>
-                  <div id="founder-notice-list" class="notice-list compact-notices"><div class="empty-state">Loading notices…</div></div>
-                </div>
-              </article>
+              <article class="panel"><div class="panel-heading"><div><p class="eyebrow">CREATE ACCOUNT</p><h2>New Director</h2></div></div><form id="create-director-form" class="admin-form" novalidate><label for="director-full-name">Full name</label><input id="director-full-name" name="fullName" required><div class="form-row"><div><label for="director-board-role">Board role</label><input id="director-board-role" name="boardRole" value="Director" required></div><div><label for="director-officer-role">Officer role</label><input id="director-officer-role" name="officerRole" placeholder="Optional"></div></div><div class="form-row"><div><label for="director-board-status">Board status</label><select id="director-board-status" name="boardStatus"><option value="interim">Interim</option><option value="confirmed">Confirmed</option></select></div><div><label for="director-voting-status">Voting status</label><select id="director-voting-status" name="votingStatus"><option value="eligible">Eligible</option><option value="ineligible">Ineligible</option></select></div></div><div class="form-row"><div><label for="director-term-start">Term start</label><input id="director-term-start" name="termStart" type="date"></div><div><label for="director-term-end">Term end</label><input id="director-term-end" name="termEnd" type="date"></div></div><label for="director-permission-template">Permission template</label><select id="director-permission-template" name="permissionTemplate"></select><button type="submit">Create Board Account</button><p id="create-director-message" class="form-message"></p></form><div id="activation-result" class="activation-result" hidden><span>ACCOUNT CREATED</span><strong id="activation-result-name">Director</strong><p>Give this one-time code directly to the director. It is not stored in Firestore.</p><code id="activation-result-code">XXXX-XXXX-XXXX</code><div class="activation-actions"><button id="copy-activation-button" class="secondary-button" type="button">Copy code</button><small id="activation-result-number">DIR-000000</small></div></div></article>
+              <article class="panel"><div class="panel-heading"><div><p class="eyebrow">BOARD NOTICE</p><h2>Publish notice</h2></div><button id="refresh-notices-button" class="table-action" type="button">Refresh</button></div><form id="board-notice-form" class="admin-form" novalidate><label for="notice-title">Title</label><input id="notice-title" name="title" required><label for="notice-body">Message</label><textarea id="notice-body" name="body" rows="4" required></textarea><div class="form-row"><div><label for="notice-priority">Priority</label><select id="notice-priority" name="priority"><option value="normal">Normal</option><option value="important">Important</option><option value="urgent">Urgent</option></select></div><div><label for="notice-expires">Expires on</label><input id="notice-expires" name="expiresOn" type="date"></div></div><button type="submit">Publish Notice</button><p id="board-notice-message" class="form-message"></p></form><div id="founder-notice-list" class="notice-list compact-notices"></div></article>
             </div>
 
-            <article class="panel account-panel founder-account-panel">
-              <div class="panel-heading account-heading">
-                <div><p class="eyebrow">DIRECTOR ACCOUNTS</p><h2>Board access roster</h2></div>
-                <span id="director-count" class="count-badge">0</span>
-              </div>
-              <div class="table-wrap">
-                <table class="director-table">
-                  <thead><tr><th>Director</th><th>Role</th><th>Board</th><th>Account</th><th>Permissions</th><th>Manage</th></tr></thead>
-                  <tbody id="director-table-body"><tr><td colspan="6" class="empty-cell">Loading accounts…</td></tr></tbody>
-                </table>
-              </div>
-            </article>
+            <article class="panel account-panel"><div class="panel-heading account-heading"><div><p class="eyebrow">DIRECTOR ACCOUNTS</p><h2>Board access roster</h2></div><span id="director-count" class="count-badge">0</span></div><div class="table-wrap"><table class="director-table"><thead><tr><th>Director</th><th>Board</th><th>Portal</th><th>Permissions</th><th>Manage</th></tr></thead><tbody id="director-table-body"><tr><td colspan="5" class="empty-cell">Loading accounts…</td></tr></tbody></table></div></article>
 
-            <article id="manage-director-panel" class="panel manage-panel" hidden>
-              <div class="panel-heading manage-heading">
-                <div><p class="eyebrow">DIRECTOR ADMINISTRATION</p><h2 id="manage-director-name">Manage Director</h2><small id="manage-director-number">DIR-000000</small></div>
-                <button id="close-manage-director" class="secondary-button" type="button">Close</button>
-              </div>
-
-              <form id="manage-director-form" class="admin-form" novalidate>
-                <input id="manage-director-uid" name="uid" type="hidden">
-                <div class="form-row">
-                  <div><label for="manage-board-role">Board role</label><input id="manage-board-role" name="boardRole" required></div>
-                  <div><label for="manage-officer-role">Officer role</label><input id="manage-officer-role" name="officerRole" placeholder="Optional"></div>
-                </div>
-                <div class="form-row">
-                  <div>
-                    <label for="manage-board-status">Board status</label>
-                    <select id="manage-board-status" name="boardStatus">
-                      <option value="interim">Interim</option>
-                      <option value="confirmed">Confirmed</option>
-                      <option value="leave_of_absence">Leave of absence</option>
-                      <option value="former">Former director</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label for="manage-voting-status">Voting status</label>
-                    <select id="manage-voting-status" name="votingStatus"><option value="eligible">Eligible</option><option value="ineligible">Ineligible</option></select>
-                  </div>
-                </div>
-                <div class="form-row">
-                  <div><label for="manage-term-start">Term start</label><input id="manage-term-start" name="termStart" type="date"></div>
-                  <div><label for="manage-term-end">Term end</label><input id="manage-term-end" name="termEnd" type="date"></div>
-                </div>
-                <div class="form-row">
-                  <div>
-                    <label for="manage-account-status">Portal account status</label>
-                    <select id="manage-account-status" name="accountStatus">
-                      <option value="awaiting_activation">Awaiting activation</option>
-                      <option value="active">Active</option>
-                      <option value="pin_reset_required">PIN reset required</option>
-                      <option value="locked">Locked</option>
-                      <option value="suspended">Suspended</option>
-                      <option value="inactive">Inactive</option>
-                      <option value="former_director">Former Director</option>
-                      <option value="archived">Archived</option>
-                    </select>
-                  </div>
-                  <div class="checkbox-setting">
-                    <label><input id="manage-directory-visible" name="directoryVisible" type="checkbox" checked> Show in Board directory</label>
-                    <small>Former or archived records can remain historically available without appearing in the normal directory.</small>
-                  </div>
-                </div>
-
-                <div class="permission-toolbar">
-                  <div><label for="manage-permission-template">Load permission template</label><select id="manage-permission-template"></select></div>
-                  <button id="apply-permission-template" class="secondary-button" type="button">Apply template</button>
-                </div>
-
-                <fieldset class="permission-fieldset">
-                  <legend>Individual portal permissions</legend>
-                  <p>Check exactly what this director may access. Saving these selections changes this account to a custom permission set.</p>
-                  <div id="permission-checkboxes" class="permission-grid"></div>
-                </fieldset>
-
-                <div class="manage-actions">
-                  <button type="submit">Save Director Access</button>
-                  <button id="prepare-pin-reset" class="secondary-button" type="button">Prepare PIN Recovery</button>
-                  <button id="cancel-manage-director" class="secondary-button" type="button">Cancel</button>
-                </div>
-                <p id="manage-director-message" class="form-message" role="status"></p>
-              </form>
-
-              <div id="pin-recovery-result" class="recovery-result" hidden>
-                <span>PIN RECOVERY PREPARED</span>
-                <h3 id="pin-recovery-name">Director</h3>
-                <p>Because this portal has no secure backend, one Firebase administrative step is still required. Set the listed Auth user's password to the temporary backing password, then give the director only the activation code. They will create a new four-digit PIN through the normal portal.</p>
-                <div class="recovery-grid">
-                  <div><label>Internal Auth alias</label><code id="pin-recovery-alias">—</code></div>
-                  <div><label>Temporary Auth password</label><code id="pin-recovery-password">—</code></div>
-                  <div><label>Director activation code</label><code id="pin-recovery-code">—</code></div>
-                </div>
-              </div>
-            </article>
+            <article id="manage-director-panel" class="panel manage-panel" hidden><div class="panel-heading manage-heading"><div><p class="eyebrow">DIRECTOR ADMINISTRATION</p><h2 id="manage-director-name">Manage Director</h2><small id="manage-director-number">DIR-000000</small></div><button id="close-manage-director" class="secondary-button" type="button">Close</button></div><form id="manage-director-form" class="admin-form" novalidate><input id="manage-director-uid" type="hidden"><div class="form-row"><div><label for="manage-board-role">Board role</label><input id="manage-board-role" required></div><div><label for="manage-officer-role">Officer role</label><input id="manage-officer-role" placeholder="Optional"></div></div><div class="form-row"><div><label for="manage-board-status">Board status</label><select id="manage-board-status"><option value="interim">Interim</option><option value="confirmed">Confirmed</option><option value="leave_of_absence">Leave of absence</option><option value="former">Former</option></select></div><div><label for="manage-voting-status">Voting status</label><select id="manage-voting-status"><option value="eligible">Eligible</option><option value="ineligible">Ineligible</option></select></div></div><div class="form-row"><div><label for="manage-term-start">Term start</label><input id="manage-term-start" type="date"></div><div><label for="manage-term-end">Term end</label><input id="manage-term-end" type="date"></div></div><div class="form-row"><div><label for="manage-account-status">Portal status</label><select id="manage-account-status"><option value="awaiting_activation">Awaiting activation</option><option value="active">Active</option><option value="pin_reset_required">PIN reset required</option><option value="locked">Locked</option><option value="suspended">Suspended</option><option value="inactive">Inactive</option><option value="former_director">Former Director</option><option value="archived">Archived</option></select></div><label class="check-row"><input id="manage-directory-visible" type="checkbox" checked><span>Show in Board directory</span></label></div><div class="permission-toolbar"><div><label for="manage-permission-template">Load permission template</label><select id="manage-permission-template"></select></div><button id="apply-permission-template" class="secondary-button" type="button">Apply template</button></div><fieldset class="permission-fieldset"><legend>Individual portal permissions</legend><div id="permission-checkboxes" class="permission-grid"></div></fieldset><div class="manage-actions"><button type="submit">Save Director Access</button><button id="prepare-pin-reset" class="secondary-button" type="button">Prepare PIN Recovery</button><button id="cancel-manage-director" class="secondary-button" type="button">Cancel</button></div><p id="manage-director-message" class="form-message"></p></form><div id="pin-recovery-result" class="recovery-result" hidden><strong id="pin-recovery-name">Director</strong><p>Use the Firebase administrative console to set this internal Auth account to the temporary password below, then give the activation code to the director.</p><dl><div><dt>Internal Auth alias</dt><dd id="pin-recovery-alias"></dd></div><div><dt>Temporary Auth password</dt><dd id="pin-recovery-password"></dd></div><div><dt>Director activation code</dt><dd id="pin-recovery-code"></dd></div></dl></div></article>
           </section>
         </div>
       </section>
     </main>
 
-    <footer>
-      <span>© The Prayer Project</span>
-      <span>Directors · Governance · Accountability</span>
-    </footer>
+    <footer><span>© The Prayer Project</span><span>Directors · Governance · Accountability</span></footer>
   </div>
   <script type="module" src="./js/app.js"></script>
 </body>
