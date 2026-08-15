@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Phase 5 Meeting QA</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 900px; margin: 40px auto; padding: 0 20px; color: #172033; }
+    h1 { margin-bottom: 6px; }
+    p { color: #667085; }
+    .pass { color: #15704e; }
+    .fail { color: #a13f31; }
+    li { margin: 8px 0; }
+    code { background: #f2f4f7; padding: 2px 5px; border-radius: 5px; }
+  </style>
+</head>
+<body>
+  <h1>Phase 5 Meeting QA</h1>
+  <p>Non-destructive browser tests for quorum and meeting lifecycle helper logic. This page does not write to Firebase.</p>
+  <ol id="results"></ol>
+  <script type="module">
+    import {
+      calculateQuorum,
+      defaultQuorumFor,
+      isMeetingTransitionAllowed,
+      meetingStatusLabel
+    } from "../js/meeting-data.js";
+
+    const results = document.querySelector("#results");
+    let failures = 0;
+
+    function test(name, condition, detail = "") {
+      const item = document.createElement("li");
+      item.className = condition ? "pass" : "fail";
+      item.textContent = `${condition ? "PASS" : "FAIL"} — ${name}${detail ? `: ${detail}` : ""}`;
+      results.append(item);
+      if (!condition) failures += 1;
+    }
+
+    test("majority quorum for 1", defaultQuorumFor(1) === 1);
+    test("majority quorum for 2", defaultQuorumFor(2) === 2);
+    test("majority quorum for 5", defaultQuorumFor(5) === 3);
+    test("majority quorum for 6", defaultQuorumFor(6) === 4);
+
+    const attendance = [
+      { votingEligible: true, presenceStatus: "present" },
+      { votingEligible: true, presenceStatus: "present" },
+      { votingEligible: true, presenceStatus: "departed" },
+      { votingEligible: false, presenceStatus: "present" }
+    ];
+    const quorum = calculateQuorum({ quorumRequired: 3 }, attendance);
+    test("only present voting-eligible directors count", quorum.presentEligible === 2, `count=${quorum.presentEligible}`);
+    test("quorum is not achieved below threshold", quorum.achieved === false);
+
+    const quorum2 = calculateQuorum({ quorumRequired: 2 }, attendance);
+    test("quorum is achieved at threshold", quorum2.achieved === true);
+
+    test("scheduled can open check-in", isMeetingTransitionAllowed("scheduled", "checkin_open"));
+    test("check-in can call to order", isMeetingTransitionAllowed("checkin_open", "in_session"));
+    test("in-session can recess", isMeetingTransitionAllowed("in_session", "recessed"));
+    test("recessed can resume", isMeetingTransitionAllowed("recessed", "in_session"));
+    test("in-session can adjourn", isMeetingTransitionAllowed("in_session", "adjourned"));
+    test("adjourned cannot reopen", !isMeetingTransitionAllowed("adjourned", "in_session"));
+    test("check-in label is readable", meetingStatusLabel("checkin_open") === "Check-in Open");
+
+    const summary = document.createElement("p");
+    summary.innerHTML = failures === 0
+      ? `<strong class="pass">All tests passed.</strong>`
+      : `<strong class="fail">${failures} test(s) failed.</strong>`;
+    document.body.append(summary);
+  </script>
+</body>
+</html>
