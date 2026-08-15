@@ -9,6 +9,30 @@ service cloud.firestore {
       return /databases/$(database)/documents/directors/$(uid);
     }
 
+    function meetingPath(meetingId) {
+      return /databases/$(database)/documents/meetings/$(meetingId);
+    }
+
+    function attendancePath(meetingId, uid) {
+      return /databases/$(database)/documents/meetingAttendance/$(meetingId + '_' + uid);
+    }
+
+    function agendaPath(agendaId) {
+      return /databases/$(database)/documents/agendaItems/$(agendaId);
+    }
+
+    function motionPath(motionId) {
+      return /databases/$(database)/documents/motions/$(motionId);
+    }
+
+    function votePath(voteId) {
+      return /databases/$(database)/documents/votes/$(voteId);
+    }
+
+    function resolutionPath(resolutionId) {
+      return /databases/$(database)/documents/resolutions/$(resolutionId);
+    }
+
     function documentEventPath(eventId) {
       return /databases/$(database)/documents/documentEvents/$(eventId);
     }
@@ -43,6 +67,20 @@ service cloud.firestore {
 
     function isOfficer() {
       return activeDirector() && currentDirector().officerRole != null;
+    }
+
+    function meetingCurrent(meetingId) {
+      return get(meetingPath(meetingId)).data;
+    }
+
+    function meetingAfter(meetingId) {
+      return getAfter(meetingPath(meetingId)).data;
+    }
+
+    function presentVotingDirector(meetingId, uid) {
+      return exists(attendancePath(meetingId, uid))
+        && get(attendancePath(meetingId, uid)).data.presenceStatus == 'present'
+        && get(attendancePath(meetingId, uid)).data.votingEligible == true;
     }
 
     function selfMayReadDirector(directorId) {
@@ -276,12 +314,27 @@ service cloud.firestore {
         ]);
     }
 
+    function agendaMayAttachDocument() {
+      return hasCapability('agenda.manage')
+        && resource.data.status == 'agenda_ready'
+        && resource.data.agendaMeetingId == null
+        && request.resource.data.agendaMeetingId is string
+        && exists(meetingPath(request.resource.data.agendaMeetingId))
+        && meetingCurrent(request.resource.data.agendaMeetingId).status in ['scheduled', 'checkin_open', 'in_session', 'recessed']
+        && request.resource.data.updatedBy == request.auth.uid
+        && request.resource.data.updatedAt == request.time
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'agendaMeetingId', 'updatedAt', 'updatedBy'
+        ]);
+    }
+
     match /documents/{documentId} {
       allow get, list: if canReadDocumentData(resource.data);
       allow create: if validNewDocument();
       allow update: if submitterMayReviseDocument()
         || reviewerMayUpdateDocument()
-        || founderMayReviewFounderOnlyDocument();
+        || founderMayReviewFounderOnlyDocument()
+        || agendaMayAttachDocument();
       allow delete: if false;
     }
 
@@ -429,14 +482,6 @@ service cloud.firestore {
       allow delete: if false;
     }
 
-    function meetingAfter(meetingId) {
-      return getAfter(/databases/$(database)/documents/meetings/$(meetingId)).data;
-    }
-
-    function meetingCurrent(meetingId) {
-      return get(/databases/$(database)/documents/meetings/$(meetingId)).data;
-    }
-
     function validAttendanceCreate(attendanceId) {
       return hasCapability('meetings.create')
         && request.resource.data.meetingId is string
@@ -513,6 +558,284 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    function validAgendaCreate() {
+      return hasCapability('agenda.manage')
+        && request.resource.data.meetingId is string
+        && exists(meetingPath(request.resource.data.meetingId))
+        && meetingCurrent(request.resource.data.meetingId).status in ['scheduled', 'checkin_open', 'in_session', 'recessed']
+        && request.resource.data.agendaNumber is string
+        && request.resource.data.order is int
+        && request.resource.data.itemType in ['business', 'report', 'motion', 'resolution', 'election', 'other']
+        && request.resource.data.title is string
+        && request.resource.data.status == 'queued'
+        && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.updatedBy == request.auth.uid
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time
+        && (
+          request.resource.data.documentId == null
+          || (
+            request.resource.data.documentId is string
+            && documentAfter(request.resource.data.documentId).agendaMeetingId == request.resource.data.meetingId
+            && documentAfter(request.resource.data.documentId).status == 'agenda_ready'
+          )
+        );
+    }
+
+    function agendaManagerMayUpdate() {
+      return hasCapability('agenda.manage')
+        && meetingCurrent(resource.data.meetingId).status in ['scheduled', 'checkin_open', 'in_session', 'recessed']
+        && request.resource.data.status in ['queued', 'active', 'completed', 'tabled', 'withdrawn']
+        && request.resource.data.updatedBy == request.auth.uid
+        && request.resource.data.updatedAt == request.time
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt', 'updatedBy']);
+    }
+
+    function motionMayActivateAgenda() {
+      return hasCapability('motions.create')
+        && meetingCurrent(resource.data.meetingId).status == 'in_session'
+        && request.resource.data.status == 'active'
+        && request.resource.data.updatedBy == request.auth.uid
+        && request.resource.data.updatedAt == request.time
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt', 'updatedBy']);
+    }
+
+    function voteMayUpdateAgenda() {
+      return meetingCurrent(resource.data.meetingId).status == 'in_session'
+        && request.resource.data.updatedBy == request.auth.uid
+        && request.resource.data.updatedAt == request.time
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt', 'updatedBy'])
+        && (
+          (hasCapability('votes.push') && request.resource.data.status == 'active')
+          || (hasCapability('votes.close') && request.resource.data.status == 'completed')
+        );
+    }
+
+    match /agendaItems/{agendaId} {
+      allow get, list: if hasCapability('meetings.view');
+      allow create: if validAgendaCreate();
+      allow update: if agendaManagerMayUpdate() || motionMayActivateAgenda() || voteMayUpdateAgenda();
+      allow delete: if false;
+    }
+
+    function validMotionCreate() {
+      return hasCapability('motions.create')
+        && request.resource.data.meetingId is string
+        && request.resource.data.agendaItemId is string
+        && meetingCurrent(request.resource.data.meetingId).status == 'in_session'
+        && presentVotingDirector(request.resource.data.meetingId, request.auth.uid)
+        && get(agendaPath(request.resource.data.agendaItemId)).data.meetingId == request.resource.data.meetingId
+        && request.resource.data.motionNumber is string
+        && request.resource.data.motionText is string
+        && request.resource.data.status == 'pending_second'
+        && request.resource.data.movedByUid == request.auth.uid
+        && request.resource.data.secondedByUid == null
+        && request.resource.data.voteId == null
+        && request.resource.data.resolutionId == null
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time
+        && request.resource.data.updatedBy == request.auth.uid;
+    }
+
+    function selfMaySecondMotion() {
+      return hasCapability('motions.second')
+        && resource.data.status == 'pending_second'
+        && resource.data.movedByUid != request.auth.uid
+        && meetingCurrent(resource.data.meetingId).status == 'in_session'
+        && presentVotingDirector(resource.data.meetingId, request.auth.uid)
+        && request.resource.data.status == 'ready'
+        && request.resource.data.secondedByUid == request.auth.uid
+        && request.resource.data.secondedAt == request.time
+        && request.resource.data.updatedAt == request.time
+        && request.resource.data.updatedBy == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'status', 'secondedByUid', 'secondedByName', 'secondedAt', 'updatedAt', 'updatedBy'
+        ]);
+    }
+
+    function voteMayStartMotion() {
+      return hasCapability('votes.push')
+        && resource.data.status == 'ready'
+        && meetingCurrent(resource.data.meetingId).status == 'in_session'
+        && request.resource.data.status == 'voting'
+        && request.resource.data.voteId is string
+        && getAfter(votePath(request.resource.data.voteId)).data.motionId == resource.id
+        && request.resource.data.updatedAt == request.time
+        && request.resource.data.updatedBy == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'status', 'voteId', 'updatedAt', 'updatedBy'
+        ]);
+    }
+
+    function voteMayFinishMotion() {
+      return hasCapability('votes.close')
+        && resource.data.status == 'voting'
+        && meetingCurrent(resource.data.meetingId).status == 'in_session'
+        && request.resource.data.status in ['adopted', 'failed']
+        && request.resource.data.resolutionId is string
+        && getAfter(resolutionPath(request.resource.data.resolutionId)).data.motionId == resource.id
+        && request.resource.data.updatedAt == request.time
+        && request.resource.data.updatedBy == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'status', 'resolutionId', 'updatedAt', 'updatedBy'
+        ]);
+    }
+
+    match /motions/{motionId} {
+      allow get, list: if hasCapability('meetings.view');
+      allow create: if validMotionCreate();
+      allow update: if selfMaySecondMotion() || voteMayStartMotion() || voteMayFinishMotion();
+      allow delete: if false;
+    }
+
+    function validVoteCreate(voteId) {
+      return hasCapability('votes.push')
+        && request.resource.data.meetingId is string
+        && request.resource.data.motionId is string
+        && request.resource.data.agendaItemId is string
+        && meetingCurrent(request.resource.data.meetingId).status == 'in_session'
+        && request.resource.data.voteNumber is string
+        && request.resource.data.status == 'open'
+        && request.resource.data.ballotVisibility in ['recorded', 'confidential']
+        && request.resource.data.thresholdMode in ['simple_majority_cast', 'majority_eligible', 'two_thirds_cast']
+        && request.resource.data.eligibleVoterUids is list
+        && request.resource.data.eligibleVoterUids.size() > 0
+        && request.resource.data.recusedDirectorUids is list
+        && meetingCurrent(request.resource.data.meetingId).eligibleVotingDirectorUids.hasAll(request.resource.data.eligibleVoterUids)
+        && meetingCurrent(request.resource.data.meetingId).eligibleVotingDirectorUids.hasAll(request.resource.data.recusedDirectorUids)
+        && !request.resource.data.eligibleVoterUids.hasAny(request.resource.data.recusedDirectorUids)
+        && request.resource.data.quorumSnapshotRequired == meetingCurrent(request.resource.data.meetingId).quorumRequired
+        && request.resource.data.quorumSnapshotPresent >= request.resource.data.quorumSnapshotRequired
+        && getAfter(motionPath(request.resource.data.motionId)).data.voteId == voteId
+        && getAfter(motionPath(request.resource.data.motionId)).data.status == 'voting'
+        && request.resource.data.openedBy == request.auth.uid
+        && request.resource.data.openedAt == request.time
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time
+        && request.resource.data.updatedBy == request.auth.uid
+        && request.resource.data.result == 'pending';
+    }
+
+    function validVoteClose() {
+      return hasCapability('votes.close')
+        && resource.data.status == 'open'
+        && meetingCurrent(resource.data.meetingId).status == 'in_session'
+        && request.resource.data.status == 'closed'
+        && request.resource.data.approveCount is int
+        && request.resource.data.opposeCount is int
+        && request.resource.data.abstainCount is int
+        && request.resource.data.ballotCount is int
+        && request.resource.data.approveCount >= 0
+        && request.resource.data.opposeCount >= 0
+        && request.resource.data.abstainCount >= 0
+        && request.resource.data.ballotCount == request.resource.data.approveCount + request.resource.data.opposeCount + request.resource.data.abstainCount
+        && request.resource.data.ballotCount <= resource.data.eligibleVoterUids.size()
+        && request.resource.data.requiredApproveCount is int
+        && request.resource.data.requiredApproveCount > 0
+        && request.resource.data.result in ['adopted', 'failed']
+        && request.resource.data.resolutionId is string
+        && getAfter(resolutionPath(request.resource.data.resolutionId)).data.voteId == resource.id
+        && request.resource.data.closedBy == request.auth.uid
+        && request.resource.data.closedAt == request.time
+        && request.resource.data.updatedAt == request.time
+        && request.resource.data.updatedBy == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'status', 'approveCount', 'opposeCount', 'abstainCount', 'ballotCount',
+          'requiredApproveCount', 'result', 'resolutionId', 'closedBy', 'closedByName',
+          'closedAt', 'updatedAt', 'updatedBy'
+        ]);
+    }
+
+    match /votes/{voteId} {
+      allow get, list: if hasCapability('votes.view');
+      allow create: if validVoteCreate(voteId);
+      allow update: if validVoteClose();
+      allow delete: if false;
+    }
+
+    function voteData(voteId) {
+      return get(votePath(voteId)).data;
+    }
+
+    function voteAfter(voteId) {
+      return getAfter(votePath(voteId)).data;
+    }
+
+    function canReadBallot(data) {
+      return founderDirector()
+        || (signedIn() && data.voterUid == request.auth.uid)
+        || hasCapability('votes.close')
+        || (
+          hasCapability('votes.view')
+          && data.ballotVisibility == 'recorded'
+          && voteData(data.voteId).status == 'closed'
+        );
+    }
+
+    function validBallotCreate(ballotIdValue) {
+      return hasCapability('votes.cast')
+        && request.resource.data.voteId is string
+        && request.resource.data.voterUid == request.auth.uid
+        && ballotIdValue == request.resource.data.voteId + '_' + request.auth.uid
+        && voteData(request.resource.data.voteId).status == 'open'
+        && request.auth.uid in voteData(request.resource.data.voteId).eligibleVoterUids
+        && request.resource.data.meetingId == voteData(request.resource.data.voteId).meetingId
+        && presentVotingDirector(request.resource.data.meetingId, request.auth.uid)
+        && request.resource.data.choice in ['approve', 'oppose', 'abstain']
+        && request.resource.data.ballotVisibility == voteData(request.resource.data.voteId).ballotVisibility
+        && request.resource.data.submittedAt == request.time;
+    }
+
+    match /voteBallots/{ballotIdValue} {
+      allow get, list: if canReadBallot(resource.data);
+      allow create: if validBallotCreate(ballotIdValue);
+      allow update, delete: if false;
+    }
+
+    function validRecusalCreate(recusalIdValue) {
+      return hasCapability('votes.push')
+        && request.resource.data.voteId is string
+        && request.resource.data.directorUid is string
+        && recusalIdValue == request.resource.data.voteId + '_' + request.resource.data.directorUid
+        && request.resource.data.directorUid in voteAfter(request.resource.data.voteId).recusedDirectorUids
+        && request.resource.data.meetingId == voteAfter(request.resource.data.voteId).meetingId
+        && request.resource.data.recordedBy == request.auth.uid
+        && request.resource.data.recordedAt == request.time;
+    }
+
+    match /voteRecusals/{recusalIdValue} {
+      allow get, list: if hasCapability('votes.view');
+      allow create: if validRecusalCreate(recusalIdValue);
+      allow update, delete: if false;
+    }
+
+    function validResolutionCreate(resolutionIdValue) {
+      return hasCapability('votes.close')
+        && hasCapability('resolutions.create')
+        && request.resource.data.resolutionNumber is string
+        && request.resource.data.meetingId is string
+        && request.resource.data.motionId is string
+        && request.resource.data.voteId is string
+        && request.resource.data.status in ['adopted', 'failed']
+        && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.certified == false
+        && voteAfter(request.resource.data.voteId).status == 'closed'
+        && voteAfter(request.resource.data.voteId).resolutionId == resolutionIdValue
+        && voteAfter(request.resource.data.voteId).meetingId == request.resource.data.meetingId
+        && voteAfter(request.resource.data.voteId).motionId == request.resource.data.motionId
+        && request.resource.data.approveCount == voteAfter(request.resource.data.voteId).approveCount
+        && request.resource.data.opposeCount == voteAfter(request.resource.data.voteId).opposeCount
+        && request.resource.data.abstainCount == voteAfter(request.resource.data.voteId).abstainCount
+        && request.resource.data.status == voteAfter(request.resource.data.voteId).result;
+    }
+
+    match /resolutions/{resolutionIdValue} {
+      allow get, list: if hasCapability('resolutions.view');
+      allow create: if validResolutionCreate(resolutionIdValue);
+      allow update, delete: if false;
+    }
+
     match /system/{systemDocument} {
       allow read, create, update: if founderDirector();
       allow delete: if false;
@@ -525,8 +848,9 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
-    // Phase 1-5 use direct reads or one equality/array-contains filter.
-    // No manual/composite Firestore indexes are defined or deployed.
+    // Phases 1-6 use direct reads, authorized collection reads, or one
+    // single-field equality / array-contains filter at a time. No manual or
+    // composite Firestore indexes are defined or deployed.
     match /{document=**} {
       allow read, write: if false;
     }
