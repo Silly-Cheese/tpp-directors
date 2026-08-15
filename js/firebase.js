@@ -35,5 +35,6 @@ if (typeof window !== "undefined") {
     .then(() => import("./phase5.js"))
     .then(() => import("./phase5-polish.js"))
     .then(() => import("./phase6.js"))
+    .then(() => import("./phase6-guard.js"))
     .catch((error) => console.error("Unable to load Board governance modules", error));
 }
