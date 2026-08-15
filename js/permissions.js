@@ -6,6 +6,7 @@ export const PERMISSIONS = Object.freeze({
   DIRECTORS_UPDATE: "directors.update",
   DIRECTORS_SUSPEND: "directors.suspend",
   PERMISSIONS_MANAGE: "permissions.manage",
+  ANNOUNCEMENTS_MANAGE: "announcements.manage",
   MEETINGS_VIEW: "meetings.view",
   MEETINGS_CREATE: "meetings.create",
   MEETINGS_ACTIVATE: "meetings.activate",
@@ -57,6 +58,7 @@ export const PERMISSION_TEMPLATES = Object.freeze({
     label: "Board Chair",
     permissions: Object.freeze([
       PERMISSIONS.DIRECTORS_VIEW,
+      PERMISSIONS.ANNOUNCEMENTS_MANAGE,
       PERMISSIONS.MEETINGS_VIEW,
       PERMISSIONS.MEETINGS_CREATE,
       PERMISSIONS.MEETINGS_ACTIVATE,
