@@ -4,6 +4,15 @@ const runtime = window.__TPP_RUNTIME__ ||= {
   startedAt: new Date().toISOString()
 };
 
+function installProductionStyles() {
+  if (document.querySelector('link[data-production-hardening]')) return;
+  const link = document.createElement("link");
+  link.rel = "stylesheet";
+  link.href = "./production-hardening.css";
+  link.dataset.productionHardening = "true";
+  document.head.append(link);
+}
+
 function safeMessage(value) {
   return String(value || "Unknown runtime error").replace(/[\r\n]+/g, " ").slice(0, 500);
 }
@@ -26,7 +35,7 @@ function ensureBanner() {
   banner.hidden = true;
   banner.setAttribute("role", "status");
   banner.style.cssText = "position:sticky;top:0;z-index:9999;padding:10px 16px;font:600 14px/1.35 system-ui,sans-serif;text-align:center;border-bottom:1px solid rgba(0,0,0,.12);";
-  const shell = document.querySelector(".app-shell") || document.body;
+  const shell = document.querySelector(".page-shell") || document.body;
   shell.prepend(banner);
   return banner;
 }
@@ -75,6 +84,7 @@ window.addEventListener("unhandledrejection", (event) => {
 });
 window.addEventListener("tpp:module-status", renderBanner);
 
+installProductionStyles();
 if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", renderBanner, { once: true });
 else renderBanner();
 
