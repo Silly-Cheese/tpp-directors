@@ -47,3 +47,22 @@
 .phase6-resolution-text{font-size:1rem;line-height:1.6;padding:.9rem;border-radius:12px;background:#f8fafc}
 @media(max-width:900px){.phase6-action-metrics,.phase6-vote-totals{grid-template-columns:repeat(2,minmax(0,1fr))}.phase6-resolution-layout{grid-template-columns:1fr}.phase6-recusal-grid{grid-template-columns:1fr}}
 @media(max-width:640px){.phase6-section-head,.phase6-form-head,.phase6-agenda-head,.phase6-motion-head,.phase6-vote-head,.phase6-resolution-detail-head,.phase5-invite-tools{flex-direction:column}.phase6-form-row,.phase6-resolution-toolbar,.phase6-ballot-buttons{grid-template-columns:1fr}.phase6-action-metrics{grid-template-columns:1fr 1fr}}
+
+
+/* Prayer Project native Phase 6 agenda redesign */
+.phase6-form{background:linear-gradient(145deg,rgba(255,255,255,.055),rgba(216,195,165,.025))!important;border:1px solid rgba(216,195,165,.18)!important;border-radius:28px!important;padding:22px!important;box-shadow:0 22px 70px rgba(0,0,0,.28)!important}
+.phase6-form-head{padding-bottom:17px;border-bottom:1px solid rgba(255,255,255,.075)}
+.phase6-form-head strong{font-size:1.12rem;color:#f7f2ea!important}.phase6-form-head span{color:#bfb3a4!important;line-height:1.5}
+.phase6-type-fieldset{margin:2px 0 4px;padding:0;border:0}.phase6-type-fieldset legend{margin-bottom:10px;color:#d6cabb;font-size:.82rem;font-weight:800}
+.phase6-type-picker{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.phase6-type-choice{display:block!important;cursor:pointer!important}.phase6-type-choice input{position:absolute!important;opacity:0!important;pointer-events:none!important;width:1px!important;height:1px!important}
+.phase6-type-choice span{display:flex;align-items:center;justify-content:center;min-height:43px;padding:9px 11px;border:1px solid rgba(216,195,165,.18);border-radius:999px;background:rgba(255,255,255,.035);color:#cfc3b4;font-size:.81rem;font-weight:800;transition:.16s ease}
+.phase6-type-choice:hover span{border-color:rgba(216,195,165,.42);background:rgba(216,195,165,.07);color:#fff0d2}
+.phase6-type-choice input:checked + span{border-color:rgba(255,240,210,.62);background:linear-gradient(135deg,rgba(255,240,210,.18),rgba(216,195,165,.10));color:#fff0d2;box-shadow:0 0 0 3px rgba(216,195,165,.07)}
+.phase6-type-choice input:focus-visible + span{outline:2px solid #fff0d2;outline-offset:2px}
+.phase6-form>label{gap:8px!important;color:#d6cabb!important;font-size:.82rem!important;font-weight:800!important}
+.phase6-form input:not([type=radio]),.phase6-form select,.phase6-form textarea{background:rgba(5,5,5,.88)!important;border:1px solid rgba(216,195,165,.26)!important;color:#f7f2ea!important;border-radius:17px!important;padding:13px 15px!important}
+.phase6-form input:not([type=radio]):focus,.phase6-form select:focus,.phase6-form textarea:focus{border-color:rgba(255,240,210,.72)!important;box-shadow:0 0 0 4px rgba(216,195,165,.09)!important}
+.phase6-add-agenda-button{min-height:48px!important;border:0!important;border-radius:999px!important;background:linear-gradient(135deg,#fff0d2,#d8c3a5)!important;color:#050505!important;font-weight:900!important;box-shadow:0 14px 38px rgba(216,195,165,.12)!important}
+.phase6-add-agenda-button:hover{transform:translateY(-1px);filter:brightness(1.03)}
+@media(max-width:680px){.phase6-type-picker{grid-template-columns:repeat(2,minmax(0,1fr))}}

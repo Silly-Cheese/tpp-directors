@@ -37,6 +37,7 @@ let ownBallot = null;
 let agendaDocuments = [];
 let resolutions = [];
 let agendaFormOpen = false;
+let agendaDraft = { itemType: "business", documentId: "", title: "", description: "" };
 let motionDraftAgendaId = null;
 let voteSetupMotionId = null;
 let selectedResolutionId = null;
@@ -152,18 +153,17 @@ function renderAgendaForm() {
   if (!agendaFormOpen || !hasPermission(currentProfile, PERMISSIONS.AGENDA_MANAGE)) return "";
   const options = agendaDocuments
     .filter((entry) => !entry.agendaMeetingId || entry.agendaMeetingId === meetingId)
-    .map((entry) => `<option value="${escapeHtml(entry.id)}">${escapeHtml(entry.documentNumber || "BDOC")} — ${escapeHtml(entry.title)}</option>`)
+    .map((entry) => `<option value="${escapeHtml(entry.id)}"${agendaDraft.documentId === entry.id ? " selected" : ""}>${escapeHtml(entry.documentNumber || "BDOC")} — ${escapeHtml(entry.title)}</option>`)
     .join("");
+  const typeChoice = (value, label) => `<label class="phase6-type-choice"><input type="radio" name="itemType" value="${value}"${agendaDraft.itemType === value ? " checked" : ""}><span>${label}</span></label>`;
   return `
     <form id="phase6-agenda-form" class="phase6-form">
-      <div class="phase6-form-head"><div><strong>Add agenda item</strong><span>Create business directly or attach an Agenda Ready Google-linked Board document.</span></div><button type="button" class="secondary-button" data-phase6-action="close-agenda-form">Close</button></div>
-      <div class="phase6-form-row">
-        <label>Type<select name="itemType"><option value="business">Business</option><option value="report">Report</option><option value="motion">Motion</option><option value="resolution">Resolution</option><option value="election">Election</option><option value="other">Other</option></select></label>
-        <label>Agenda Ready document<select name="documentId"><option value="">None</option>${options}</select></label>
-      </div>
-      <label>Title<input name="title" maxlength="180" required></label>
-      <label>Description<textarea name="description" rows="3" maxlength="1200"></textarea></label>
-      <button type="submit" class="meeting-primary-button">Add to Agenda</button>
+      <div class="phase6-form-head"><div><strong>Add agenda item</strong><span>Add an item directly or connect an Agenda Ready Board document.</span></div><button type="button" class="secondary-button" data-phase6-action="close-agenda-form">Close</button></div>
+      <fieldset class="phase6-type-fieldset"><legend>Agenda item type</legend><div class="phase6-type-picker">${typeChoice("business","Business")}${typeChoice("report","Report")}${typeChoice("motion","Motion")}${typeChoice("resolution","Resolution")}${typeChoice("election","Election")}${typeChoice("other","Other")}</div></fieldset>
+      <label>Agenda Ready document<select name="documentId"><option value=""${agendaDraft.documentId ? "" : " selected"}>None</option>${options}</select></label>
+      <label>Title<input name="title" maxlength="180" value="${escapeHtml(agendaDraft.title)}" required></label>
+      <label>Description<textarea name="description" rows="3" maxlength="1200">${escapeHtml(agendaDraft.description)}</textarea></label>
+      <button type="submit" class="meeting-primary-button phase6-add-agenda-button">Add to Agenda</button>
       <p id="phase6-agenda-message" class="meeting-form-message"></p>
     </form>`;
 }
@@ -288,9 +288,26 @@ function renderAgendaItem(item) {
     </article>`;
 }
 
+function captureAgendaDraft() {
+  const form = $("#phase6-agenda-form");
+  if (!form) return;
+  const data = new FormData(form);
+  agendaDraft = {
+    itemType: String(data.get("itemType") || agendaDraft.itemType || "business"),
+    documentId: String(data.get("documentId") || ""),
+    title: String(data.get("title") || ""),
+    description: String(data.get("description") || "")
+  };
+}
+
+function resetAgendaDraft() {
+  agendaDraft = { itemType: "business", documentId: "", title: "", description: "" };
+}
+
 function renderWorkspace() {
   const host = $("#phase6-meeting-workspace");
   if (!host || host.dataset.meetingId !== meetingId) return;
+  if (agendaFormOpen) captureAgendaDraft();
   if (!currentProfile || !meeting) {
     host.innerHTML = '<div class="phase6-empty">Loading Board actions…</div>';
     return;
@@ -365,6 +382,7 @@ function bindMeeting(meetingIdValue) {
   clearMeetingStreams();
   meetingId = meetingIdValue;
   agendaFormOpen = false;
+  resetAgendaDraft();
   motionDraftAgendaId = null;
   voteSetupMotionId = null;
   if (!meetingId || !currentProfile) return;
@@ -469,6 +487,7 @@ async function submitAgendaForm(form) {
       description: data.get("description")
     }, currentProfile);
     agendaFormOpen = false;
+    resetAgendaDraft();
     await refreshAgendaDocuments();
   } catch (error) {
     if (message) message.textContent = error.message || "The agenda item could not be created.";
@@ -556,8 +575,8 @@ function bindGlobalUI() {
     if (nav) return queueMicrotask(showResolutionView);
 
     const action = event.target.closest("[data-phase6-action]")?.dataset.phase6Action;
-    if (action === "open-agenda-form") { agendaFormOpen = true; return renderWorkspace(); }
-    if (action === "close-agenda-form") { agendaFormOpen = false; return renderWorkspace(); }
+    if (action === "open-agenda-form") { resetAgendaDraft(); agendaFormOpen = true; return renderWorkspace(); }
+    if (action === "close-agenda-form") { agendaFormOpen = false; resetAgendaDraft(); return renderWorkspace(); }
     if (action === "cancel-motion") { motionDraftAgendaId = null; return renderWorkspace(); }
     if (action === "cancel-vote-setup") { voteSetupMotionId = null; return renderWorkspace(); }
 
@@ -599,9 +618,11 @@ function bindGlobalUI() {
   });
 
   document.addEventListener("input", (event) => {
+    if (event.target.closest?.("#phase6-agenda-form")) captureAgendaDraft();
     if (event.target.id === "phase6-resolution-search") renderResolutions();
   });
   document.addEventListener("change", (event) => {
+    if (event.target.closest?.("#phase6-agenda-form")) captureAgendaDraft();
     if (event.target.id === "phase6-resolution-status") renderResolutions();
   });
 }
