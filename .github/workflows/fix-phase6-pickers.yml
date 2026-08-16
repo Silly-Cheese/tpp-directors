@@ -15,143 +15,16 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: main
-      - name: Replace agenda type and document controls with deterministic buttons
+      - name: Patch Phase 6 controls
+        env:
+          PATCH_B64: "CmZyb20gcGF0aGxpYiBpbXBvcnQgUGF0aAoKcCA9IFBhdGgoImpzL3BoYXNlNi5qcyIpCnMgPSBwLnJlYWRfdGV4dCgpCgpzdGF0ZV9vbGQgPSAnbGV0IGFnZW5kYURyYWZ0ID0geyBpdGVtVHlwZTogImJ1c2luZXNzIiwgZG9jdW1lbnRJZDogIiIsIHRpdGxlOiAiIiwgZGVzY3JpcHRpb246ICIiIH07XG5sZXQgbW90aW9uRHJhZnRBZ2VuZGFJZCA9IG51bGw7JwpzdGF0ZV9uZXcgPSAnbGV0IGFnZW5kYURyYWZ0ID0geyBpdGVtVHlwZTogImJ1c2luZXNzIiwgZG9jdW1lbnRJZDogIiIsIHRpdGxlOiAiIiwgZGVzY3JpcHRpb246ICIiIH07XG5sZXQgYWdlbmRhRG9jdW1lbnRQaWNrZXJPcGVuID0gZmFsc2U7XG5sZXQgbW90aW9uRHJhZnRBZ2VuZGFJZCA9IG51bGw7JwppZiBzdGF0ZV9vbGQgaW4gczoKICAgIHMgPSBzLnJlcGxhY2Uoc3RhdGVfb2xkLCBzdGF0ZV9uZXcsIDEpCmVsaWYgJ2xldCBhZ2VuZGFEb2N1bWVudFBpY2tlck9wZW4gPSBmYWxzZTsnIG5vdCBpbiBzOgogICAgcmFpc2UgU3lzdGVtRXhpdCgiYWdlbmRhIHBpY2tlciBzdGF0ZSBhbmNob3Igbm90IGZvdW5kIikKCnN0YXJ0ID0gcy5pbmRleCgiZnVuY3Rpb24gcmVuZGVyQWdlbmRhRm9ybSgpIHsiKQplbmQgPSBzLmluZGV4KCJcbmZ1bmN0aW9uIHJlbmRlck1vdGlvbkZvcm0iLCBzdGFydCkKcmVwbGFjZW1lbnQgPSByJycnZnVuY3Rpb24gcmVuZGVyQWdlbmRhRm9ybSgpIHsKICBpZiAoIWFnZW5kYUZvcm1PcGVuIHx8ICFoYXNQZXJtaXNzaW9uKGN1cnJlbnRQcm9maWxlLCBQRVJNSVNTSU9OUy5BR0VOREFfTUFOQUdFKSkpIHJldHVybiAiIjsKICBjb25zdCBhdmFpbGFibGVEb2N1bWVudHMgPSBhZ2VuZGFEb2N1bWVudHMuZmlsdGVyKChlbnRyeSkgPT4gIWVudHJ5LmFnZW5kYU1lZXRpbmdJZCB8fCBlbnRyeS5hZ2VuZGFNZWV0aW5nSWQgPT09IG1lZXRpbmdJZCk7CiAgY29uc3Qgc2VsZWN0ZWREb2N1bWVudCA9IGF2YWlsYWJsZURvY3VtZW50cy5maW5kKChlbnRyeSkgPT4gZW50cnkuaWQgPT09IGFnZW5kYURyYWZ0LmRvY3VtZW50SWQpIHx8IG51bGw7CiAgY29uc3QgdHlwZUNob2ljZSA9ICh2YWx1ZSwgbGFiZWwpID0+IGA8YnV0dG9uIHR5cGU9ImJ1dHRvbiIgY2xhc3M9InBoYXNlNi10eXBlLWNob2ljZSR7YWdlbmRhRHJhZnQuaXRlbVR5cGUgPT09IHZhbHVlID8gIiBzZWxlY3RlZCIgOiAiIn0iIGRhdGEtcGhhc2U2LXR5cGUtY2hvaWNlPSIke3ZhbHVlfSIgYXJpYS1wcmVzc2VkPSIke2FnZW5kYURyYWZ0Lml0ZW1UeXBlID09PSB2YWx1ZSA/ICJ0cnVlIiA6ICJmYWxzZSJ9Ij4ke2xhYmVsfTwvYnV0dG9uPmA7CiAgY29uc3QgZG9jdW1lbnRDaG9pY2VzID0gWwogICAgYDxidXR0b24gdHlwZT0iYnV0dG9uIiBjbGFzcz0icGhhc2U2LWRvY3VtZW50LWNob2ljZSR7YWdlbmRhRHJhZnQuZG9jdW1lbnRJZCA/ICIiIDogIiBzZWxlY3RlZCJ9IiBkYXRhLXBoYXNlNi1kb2N1bWVudC1jaG9pY2U9IiI+PHN0cm9uZz5Ob25lPC9zdHJvbmc+PHNwYW4+Tm8gQm9hcmQgZG9jdW1lbnQgYXR0YWNoZWQ8L3NwYW4+PC9idXR0b24+YCwKICAgIC4uLmF2YWlsYWJsZURvY3VtZW50cy5tYXAoKGVudHJ5KSA9PiBgPGJ1dHRvbiB0eXBlPSJidXR0b24iIGNsYXNzPSJwaGFzZTYtZG9jdW1lbnQtY2hvaWNlJHthZ2VuZGFEcmFmdC5kb2N1bWVudElkID09PSBlbnRyeS5pZCA/ICIgc2VsZWN0ZWQiIDogIiJ9IiBkYXRhLXBoYXNlNi1kb2N1bWVudC1jaG9pY2U9IiR7ZXNjYXBlSHRtbChlbnRyeS5pZCl9Ij48c3Ryb25nPiR7ZXNjYXBlSHRtbChlbnRyeS5kb2N1bWVudE51bWJlciB8fCAiQkRPQyIpfSDCtCAke2VzY2FwZUh0bWwoZW50cnkudGl0bGUpfTwvc3Ryb25nPjxzcGFuPkFnZW5kYSBSZWFkeSBCb2FyZCBkb2N1bWVudDwvc3Bhbj48L2J1dHRvbj5gKQogIF0uam9pbigiIik7CiAgcmV0dXJuIGAKICAgIDxmb3JtIGlkPSJwaGFzZTYtYWdlbmRhLWZvcm0iIGNsYXNzPSJwaGFzZTYtZm9ybSI+CiAgICAgIDxkaXYgY2xhc3M9InBoYXNlNi1mb3JtLWhlYWQiPjxkaXY+PHN0cm9uZz5BZGQgYWdlbmRhIGl0ZW08L3N0cm9uZz48c3Bhbj5BZGQgYW4gaXRlbSBkaXJlY3RseSBvciBjb25uZWN0IGFuIEFnZW5kYSBSZWFkeSBCb2FyZCBkb2N1bWVudC48L3NwYW4+PC9kaXY+PGJ1dHRvbiB0eXBlPSJidXR0b24iIGNsYXNzPSJzZWNvbmRhcnktYnV0dG9uIiBkYXRhLXBoYXNlNi1hY3Rpb249ImNsb3NlLWFnZW5kYS1mb3JtIj5DbG9zZTwvYnV0dG9uPjwvZGl2PgogICAgICA8ZmllbGRzZXQgY2xhc3M9InBoYXNlNi10eXBlLWZpZWxkc2V0Ij48bGVnZW5kPkFnZW5kYSBpdGVtIHR5cGU8L2xlZ2VuZD48ZGl2IGNsYXNzPSJwaGFzZTYtdHlwZS1waWNrZXIiPiR7dHlwZUNob2ljZSgiYnVzaW5lc3MiLCJCdXNpbmVzcyIpfSR7dHlwZUNob2ljZSgicmVwb3J0IiwiUmVwb3J0Iil9JHt0eXBlQ2hvaWNlKCJtb3Rpb24iLCJNb3Rpb24iKX0ke3R5cGVDaG9pY2UoInJlc29sdXRpb24iLCJSZXNvbHV0aW9uIil9JHt0eXBlQ2hvaWNlKCJlbGVjdGlvbiIsIkVsZWN0aW9uIil9JHt0eXBlQ2hvaWNlKCJvdGhlciIsIk90aGVyIil9PC9kaXY+PC9maWVsZHNldD4KICAgICAgPGlucHV0IHR5cGU9ImhpZGRlbiIgbmFtZT0iaXRlbVR5cGUiIHZhbHVlPSIke2VzY2FwZUh0bWwoYWdlbmRhRHJhZnQuaXRlbVR5cGUpfSI+CiAgICAgIDxpbnB1dCB0eXBlPSJoaWRkZW4iIG5hbWU9ImRvY3VtZW50SWQiIHZhbHVlPSIke2VzY2FwZUh0bWwoYWdlbmRhRHJhZnQuZG9jdW1lbnRJZCl9Ij4KICAgICAgPGRpdiBjbGFzcz0icGhhc2U2LWRvY3VtZW50LXBpY2tlciI+CiAgICAgICAgPHNwYW4gY2xhc3M9InBoYXNlNi1maWVsZC1sYWJlbCI+QWdlbmRhIFJlYWR5IGRvY3VtZW50PC9zcGFuPgogICAgICAgIDxidXR0b24gdHlwZT0iYnV0dG9uIiBjbGFzcz0icGhhc2U2LWRvY3VtZW50LXRyaWdnZXIiIGRhdGEtcGhhc2U2LWFjdGlvbj0idG9nZ2xlLWRvY3VtZW50LXBpY2tlciIgYXJpYS1leHBhbmRlZD0iJHthZ2VuZGFEb2N1bWVudFBpY2tlck9wZW4gPyAidHJ1ZSIgOiAiZmFsc2UifSI+CiAgICAgICAgICA8c3Bhbj48c3Ryb25nPiR7c2VsZWN0ZWREb2N1bWVudCA/IGVzY2FwZUh0bWwoc2VsZWN0ZWREb2N1bWVudC5kb2N1bWVudE51bWJlciB8fCAiQkRPQyIpIDogIk5vbmUifTwvc3Ryb25nPjxzbWFsbD4ke3NlbGVjdGVkRG9jdW1lbnQgPyBlc2NhcGVIdG1sKHNlbGVjdGVkRG9jdW1lbnQudGl0bGUpIDogIk5vIEJvYXJkIGRvY3VtZW50IGF0dGFjaGVkIn08L3NtYWxsPjwvc3Bhbj4KICAgICAgICAgIDxzcGFuIGNsYXNzPSJwaGFzZTYtcGlja2VyLWNoZXZyb24iIGFyaWEtaGlkZGVuPSJ0cnVlIj4ke2FnZW5kYURvY3VtZW50UGlja2VyT3BlbiA/ICLilooiIDogIuKWvCJ9PC9zcGFuPgogICAgICAgIDwvYnV0dG9uPgogICAgICAgICR7YWdlbmRhRG9jdW1lbnRQaWNrZXJPcGVuID8gYDxkaXYgY2xhc3M9InBoYXNlNi1kb2N1bWVudC1tZW51IiByb2xlPSJsaXN0Ym94Ij4ke2RvY3VtZW50Q2hvaWNlc308L2Rpdj5gIDogIiJ9CiAgICAgIDwvZGl2PgogICAgICA8bGFiZWw+VGl0bGU8aW5wdXQgbmFtZT0idGl0bGUiIG1heGxlbmd0aD0iMTgwIiB2YWx1ZT0iJHtlc2NhcGVIdG1sKGFnZW5kYURyYWZ0LnRpdGxlKX0iIHJlcXVpcmVkPjwvbGFiZWw+CiAgICAgIDxsYWJlbD5EZXNjcmlwdGlvbjx0ZXh0YXJlYSBuYW1lPSJkZXNjcmlwdGlvbiIgcm93cz0iMyIgbWF4bGVuZ3RoPSIxMjAwIj4ke2VzY2FwZUh0bWwoYWdlbmRhRHJhZnQuZGVzY3JpcHRpb24pfTwvdGV4dGFyZWE+PC9sYWJlbD4KICAgICAgPGJ1dHRvbiB0eXBlPSJzdWJtaXQiIGNsYXNzPSJtZWV0aW5nLXByaW1hcnktYnV0dG9uIHBoYXNlNi1hZGQtYWdlbmRhLWJ1dHRvbiI+QWRkIHRvIEFnZW5kYTwvYnV0dG9uPgogICAgICA8cCBpZD0icGhhc2U2LWFnZW5kYS1tZXNzYWdlIiBjbGFzcz0ibWVldGluZy1mb3JtLW1lc3NhZ2UiPjwvcD4KICAgIDwvZm9ybT5gOwp9CicnJwpzID0gc1s6c3RhcnRdICsgcmVwbGFjZW1lbnQgKyBzW2VuZDpdCgpyZXNldF9vbGQgPSAnJydmdW5jdGlvbiByZXNldEFnZW5kYURyYWZ0KCkgewogIGFnZW5kYURyYWZ0ID0geyBpdGVtVHlwZTogImJ1c2luZXNzIiwgZG9jdW1lbnRJZDogIiIsIHRpdGxlOiAiIiwgZGVzY3JpcHRpb246ICIiIH07Cn0nJwpyZXNldF9uZXcgPSAnJydmdW5jdGlvbiByZXNldEFnZW5kYURyYWZ0KCkgewogIGFnZW5kYURyYWZ0ID0geyBpdGVtVHlwZTogImJ1c2luZXNzIiwgZG9jdW1lbnRJZDogIiIsIHRpdGxlOiAiIiwgZGVzY3JpcHRpb246ICIiIH07CiAgYWdlbmRhRG9jdW1lbnRQaWNrZXJPcGVuID0gZmFsc2U7Cn0nJwppZiByZXNldF9vbGQgaW4gczoKICAgIHMgPSBzLnJlcGxhY2UocmVzZXRfb2xkLCByZXNldF9uZXcsIDEpCgphbmNob3IgPSAnICAgIGNvbnN0IGFjdGlvbiA9IGV2ZW50LnRhcmdldC5jbG9zZXN0KCJbZGF0YS1waGFzZTYtYWN0aW9uXSIpPy5kYXRhc2V0LnBoYXNlNkFjdGlvbjtcbicKaW5zZXJ0ID0gJycnICAgIGNvbnN0IHR5cGVDaG9pY2UgPSBldmVudC50YXJnZXQuY2xvc2VzdCgiW2RhdGEtcGhhc2U2LXR5cGUtY2hvaWNlXSIpOwogICAgaWYgKHR5cGVDaG9pY2UpIHsKICAgICAgY2FwdHVyZUFnZW5kYURyYWZ0KCk7CiAgICAgIGFnZW5kYURyYWZ0Lml0ZW1UeXBlID0gdHlwZUNob2ljZS5kYXRhc2V0LnBoYXNlNlR5cGVDaG9pY2UgfHwgImJ1c2luZXNzIjsKICAgICAgcmV0dXJuIHJlbmRlcldvcmtzcGFjZSgpOwogICAgfQoKICAgIGNvbnN0IGRvY3VtZW50Q2hvaWNlID0gZXZlbnQudGFyZ2V0LmNsb3Nlc3QoIltkYXRhLXBoYXNlNi1kb2N1bWVudC1jaG9pY2VdIik7CiAgICBpZiAoZG9jdW1lbnRDaG9pY2UpIHsKICAgICAgY2FwdHVyZUFnZW5kYURyYWZ0KCk7CiAgICAgIGFnZW5kYURyYWZ0LmRvY3VtZW50SWQgPSBkb2N1bWVudENob2ljZS5kYXRhc2V0LnBoYXNlNkRvY3VtZW50Q2hvaWNlIHx8ICIiOwogICAgICBhZ2VuZGFEb2N1bWVudFBpY2tlck9wZW4gPSBmYWxzZTsKICAgICAgcmV0dXJuIHJlbmRlcldvcmtzcGFjZSgpOwogICAgfQoKJycKaWYgJ2NvbnN0IHR5cGVDaG9pY2UgPSBldmVudC50YXJnZXQuY2xvc2VzdCgiW2RhdGEtcGhhc2U2LXR5cGUtY2hvaWNlXSIpJyBub3QgaW4gczoKICAgIGlmIGFuY2hvciBub3QgaW4gczoKICAgICAgICByYWlzZSBTeXN0ZW1FeGl0KCJjbGljayBoYW5kbGVyIGFuY2hvciBub3QgZm91bmQiKQogICAgcyA9IHMucmVwbGFjZShhbmNob3IsIGluc2VydCArIGFuY2hvciwgMSkKCm9wZW5jbG9zZV9vbGQgPSAnJycgICAgaWYgKGFjdGlvbiA9PT0gIm9wZW4tYWdlbmRhLWZvcm0iKSB7IHJlc2V0QWdlbmRhRHJhZnQoKTsgYWdlbmRhRm9ybU9wZW4gPSB0cnVlOyByZXR1cm4gcmVuZGVyV29ya3NwYWNlKCk7CiAgICBpZiAoYWN0aW9uID09PSAiY2xvc2UtYWdlbmRhLWZvcm0iKSB7IGFnZW5kYUZvcm1PcGVuID0gZmFsc2U7IHJlc2V0QWdlbmRhRHJhZnQoKTsgcmV0dXJuIHJlbmRlcldvcmtzcGFjZSgpOyB9JycnCm9wZW5jbG9zZV9uZXcgPSAnJycgICAgaWYgKGFjdGlvbiA9PT0gIm9wZW4tYWdlbmRhLWZvcm0iKSB7IHJlc2V0QWdlbmRhRHJhZnQoKTsgYWdlbmRhRm9ybU9wZW4gPSB0cnVlOyByZXR1cm4gcmVuZGVyV29ya3NwYWNlKCk7CiAgICBpZiAoYWN0aW9uID09PSAidG9nZ2xlLWRvY3VtZW50LXBpY2tlciIpIHsgY2FwdHVyZUFnZW5kYURyYWZ0KCk7IGFnZW5kYURvY3VtZW50UGlja2VyT3BlbiA9ICFhZ2VuZGFEb2N1bWVudFBpY2tlck9wZW47IHJldHVybiByZW5kZXJXb3Jrc3BhY2UoKTsgfQogICAgaWYgKGFjdGlvbiA9PT0gImNsb3NlLWFnZW5kYS1mb3JtIikgeyBhZ2VuZGFGb3JtT3BlbiA9IGZhbHNlOyByZXNldEFnZW5kYURyYWZ0KCk7IHJldHVybiByZW5kZXJXb3Jrc3BhY2UoKTsgfScnJwppZiAnYWN0aW9uID09PSAidG9nZ2xlLWRvY3VtZW50LXBpY2tlciInIG5vdCBpbiBzOgogICAgaWYgb3BlbmNsb3NlX29sZCBub3QgaW4gczoKICAgICAgICByYWlzZSBTeXN0ZW1FeGl0KCJvcGVuL2Nsb3NlIGFjdGlvbiBhbmNob3Igbm90IGZvdW5kIikKICAgIHMgPSBzLnJlcGxhY2Uob3BlbmNsb3NlX29sZCwgb3BlbmNsb3NlX25ldywgMSkKCnAud3JpdGVfdGV4dChzKQoKY3NzID0gUGF0aCgicGhhc2U2LmNzcyIpCmMgPSBjc3MucmVhZF90ZXh0KCkKbWFya2VyID0gIi8qIERldGVybWluaXN0aWMgUGhhc2UgNiBhZ2VuZGEgcGlja2VycyAqLyIKaWYgbWFya2VyIG5vdCBpbiBjOgogICAgYyArPSByJycnCgovKiBEZXRlcm1pbmlzdGljIFBoYXNlIDYgYWdlbmRhIHBpY2tlcnMgKi8KLnBoYXNlNi10eXBlLXBpY2tlcntkaXNwbGF5OmdyaWQ7Z3JpZC10ZW1wbGF0ZS1jb2x1bW5zOnJlcGVhdCgzLG1pbm1heCgwLDFmcikpO2dhcDo5cHghaW1wb3J0YW50fQoucGhhc2U2LXR5cGUtY2hvaWNle2FwcGVhcmFuY2U6bm9uZWltcG9ydGFudDtkaXNwbGF5OmZsZXhpbXBvcnRhbnQ7YWxpZ24taXRlbXM6Y2VudGVyaW1wb3J0YW50O2p1c3RpZnktY29udGVudDpjZW50ZXJpbXBvcnRhbnQ7bWluLWhlaWdodDo0NHB4aW1wb3J0YW50O3BhZGRpbmc6MTBweCAxM3B4aW1wb3J0YW50O2JvcmRlcjoxcHggc29saWQgcmdiYSgyMTYsMTk1LDE2NSwuMjApaW1wb3J0YW50O2JvcmRlci1yYWRpdXM6OTk5cHhpbXBvcnRhbnQ7YmFja2dyb3VuZDpyZ2JhKDI1NSwyNTUsMjU1LC4wMzUpIWltcG9ydGFudDtjb2xvcjojY2ZjM2I0IWltcG9ydGFudDtmb250OmluaGVyaXRpbXBvcnRhbnQ7Zm9udC1zaXplOi44MnJlbWltcG9ydGFudDtmb250LXdlaWdodDo4MDBpbXBvcnRhbnQ7Y3Vyc29yOnBvaW50ZXJpbXBvcnRhbnQ7cG9pbnRlci1ldmVudHM6YXV0b2ltcG9ydGFudDtwb3NpdGlvbjpyZWxhdGl2ZWltcG9ydGFudDt6LWluZGV4OjIwaW1wb3J0YW50fQoucGhhc2U2LXR5cGUtY2hvaWNlOmhvdmVye2JvcmRlci1jb2xvcjpyZ2JhKDIxNiwxOTUsMTY1LC40OClpbXBvcnRhbnQ7YmFja2dyb3VuZDpyZ2JhKDIxNiwxOTUsMTY1LC4wOClpbXBvcnRhbnQ7Y29sb3I6I2ZmZjBkMmltcG9ydGFudH0KLnBoYXNlNi10eXBlLWNob2ljZS5zZWxlY3RlZHtib3JkZXItY29sb3I6cmdiYSgyNTUsMjQwLDIxMCwuNzIpaW1wb3J0YW50O2JhY2tncm91bmQ6bGluZWFyLWdyYWRpZW50KDEzNWRlZyxyZ2JhKDI1NSwyNDAsMjEwLC4yMCkscmdiYSgyMTYsMTk1LDE2NSwuMTApKWltcG9ydGFudDtjb2xvcjojZmZmMGQyaW1wb3J0YW50O2JveC1zaGFkb3c6MCAwIDAgM3B4IHJnYmEoMjE2LDE5NSwxNjUsLjA4KWltcG9ydGFudH0KLnBoYXNlNi10eXBlLWNob2ljZTpmb2N1cy12aXNpYmxle291dGxpbmU6MnB4IHNvbGlkICNmZmYwZDJpbXBvcnRhbnQ7b3V0bGluZS1vZmZzZXQ6MnB4aW1wb3J0YW50fQoucGhhc2U2LWRvY3VtZW50LXBpY2tlcntkaXNwbGF5OmdyaWQ7Z2FwOjhweDtwb3NpdGlvbjpyZWxhdGl2ZTt6LWluZGV4OjMwfQoucGhhc2U2LWZpZWxkLWxhYmVse2NvbG9yOiNkNmNhYmI7Zm9udC1zaXplOi44MnJlbTtmb250LXdlaWdodDo4MDB9Ci5waGFzZTYtZG9jdW1lbnQtdHJpZ2dlcnt3aWR0aDoxMDAlO21pbi1oZWlnaHQ6NThweDtwYWRkaW5nOjExcHggMTRweDtib3JkZXI6MXB4IHNvbGlkIHJnYmEoMjE2LDE5NSwxNjUsLjI4KWltcG9ydGFudDtib3JkZXItcmFkaXVzOjE3cHhpbXBvcnRhbnQ7YmFja2dyb3VuZDpyZ2JhKDUsNSw1LC45MilpbXBvcnRhbnQ7Y29sb3I6I2Y3ZjJlYWltcG9ydGFudDtkaXNwbGF5OmZsZXhpbXBvcnRhbnQ7YWxpZ24taXRlbXM6Y2VudGVyaW1wb3J0YW50O2p1c3RpZnktY29udGVudDpzcGFjZS1iZXR3ZWVuaW1wb3J0YW50O2dhcDoxNHB4aW1wb3J0YW50O3RleHQtYWxpZ246bGVmdGltcG9ydGFudDtjdXJzb3I6cG9pbnRlcmltcG9ydGFudDtwb2ludGVyLWV2ZW50czphdXRvaW1wb3J0YW50O3Bvc2l0aW9uOnJlbGF0aXZlaW1wb3J0YW50O3otaW5kZXg6MzFpbXBvcnRhbnR9Ci5waGFzZTYtZG9jdW1lbnQtdHJpZ2dlcj5zcGFuOmZpcnN0LWNoaWxke2Rpc3BsYXk6Z3JpZDtnYXA6M3B4O21pbi13aWR0aDowfS5waGFzZTYtZG9jdW1lbnQtdHJpZ2dlciBzdHJvbmd7Y29sb3I6I2ZmZjBkMmltcG9ydGFudDtmb250LXNpemU6Ljg2cmVtfS5waGFzZTYtZG9jdW1lbnQtdHJpZ2dlciBzbWFsbHtjb2xvcjojYTk5Zjk0IWltcG9ydGFudDt3aGl0ZS1zcGFjZTpub3dyYXA7b3ZlcmZsb3c6aGlkZGVuO3RleHQtb3ZlcmZsb3c6ZWxsaXBzaXN9Ci5waGFzZTYtcGlja2VyLWNoZXZyb257Y29sb3I6I2Q4YzNhNWltcG9ydGFudDtmb250LXNpemU6LjcycmVtO2ZsZXg6MCAwIGF1dG99Ci5waGFzZTYtZG9jdW1lbnQtdHJpZ2dlcjpob3ZlciwucGhhc2U2LWRvY3VtZW50LXRyaWdnZXJbYXJpYS1leHBhbmRlZD0idHJ1ZSJde2JvcmRlci1jb2xvcjpyZ2JhKDI1NSwyNDAsMjEwLC42MilpbXBvcnRhbnQ7YmFja2dyb3VuZDojMGQwYjA5IWltcG9ydGFudH0KLnBoYXNlNi1kb2N1bWVudC1tZW51e2Rpc3BsYXk6Z3JpZDtnYXA6N3B4O3BhZGRpbmc6OHB4O2JvcmRlcjoxcHggc29saWQgcmdiYSgyMTYsMTk1LDE2NSwuMjQpO2JvcmRlci1yYWRpdXM6MThweDtiYWNrZ3JvdW5kOiMwOTA4MDY7Ym94LXNoYWRvdzowIDIycHggNjBweCByZ2JhKDAsMCwwLC41NSk7cG9zaXRpb246cmVsYXRpdmU7ei1pbmRleDo0MH0KLnBoYXNlNi1kb2N1bWVudC1jaG9pY2V7d2lkdGg6MTAwJTtkaXNwbGF5OmdyaWRpbXBvcnRhbnQ7Z2FwOjNweGltcG9ydGFudDtwYWRkaW5nOjExcHggMTJweGltcG9ydGFudDtib3JkZXI6MXB4IHNvbGlkIHRyYW5zcGFyZW50aW1wb3J0YW50O2JvcmRlci1yYWRpdXM6MTNweGltcG9ydGFudDtiYWNrZ3JvdW5kOnRyYW5zcGFyZW50aW1wb3J0YW50O2NvbG9yOiNmN2YyZWFpbXBvcnRhbnQ7dGV4dC1hbGlnbjpsZWZ0aW1wb3J0YW50O2N1cnNvcjpwb2ludGVyaW1wb3J0YW50O3BvaW50ZXItZXZlbnRzOmF1dG9pbXBvcnRhbnQ7cG9zaXRpb246cmVsYXRpdmVpbXBvcnRhbnQ7ei1pbmRleDo0MWltcG9ydGFudH0KLnBoYXNlNi1kb2N1bWVudC1jaG9pY2Ugc3Ryb25ne2ZvbnQtc2l6ZTouODRyZW19LnBoYXNlNi1kb2N1bWVudC1jaG9pY2Ugc3Bhbntjb2xvcjojOTc4ZDgyaW1wb3J0YW50O2ZvbnQtc2l6ZTouNzVyZW19Ci5waGFzZTYtZG9jdW1lbnQtY2hvaWNlOmhvdmVye2JhY2tncm91bmQ6cmdiYSgyNTUsMjU1LDI1NSwuMDU1KWltcG9ydGFudDtib3JkZXItY29sb3I6cmdiYSgyMTYsMTk1LDE2NSwuMTYpaW1wb3J0YW50fQoucGhhc2U2LWRvY3VtZW50LWNob2ljZS5zZWxlY3RlZHtiYWNrZ3JvdW5kOnJnYmEoMjE2LDE5NSwxNjUsLjA5KWltcG9ydGFudDtib3JkZXItY29sb3I6cmdiYSgyMTYsMTk1LDE2NSwuMzApaW1wb3J0YW50O2NvbG9yOiNmZmYwZDJpbXBvcnRhbnR9Ci5waGFzZTYtZm9ybSBpbnB1dFt0eXBlPSJoaWRkZW4iXXtkaXNwbGF5Om5vbmVpbXBvcnRhbnR9CkBtZWRpYShtYXgtd2lkdGg6NjgwcHgpey5waGFzZTYtdHlwZS1waWNrZXJ7Z3JpZC10ZW1wbGF0ZS1jb2x1bW5zOnJlcGVhdCgyLG1pbm1heCgwLDFmcikpfX0KJycnCiAgICBjc3Mud3JpdGVfdGV4dChjKQo="
         run: |
-          python - <<'PY'
-          from pathlib import Path
-
-          p = Path('js/phase6.js')
-          s = p.read_text()
-
-          s = s.replace(
-              'let agendaDraft = { itemType: "business", documentId: "", title: "", description: "" };\nlet motionDraftAgendaId = null;',
-              'let agendaDraft = { itemType: "business", documentId: "", title: "", description: "" };\nlet agendaDocumentPickerOpen = false;\nlet motionDraftAgendaId = null;',
-              1
-          )
-
-          start = s.index('function renderAgendaForm() {')
-          end = s.index('\nfunction renderMotionForm', start)
-          replacement = r'''function renderAgendaForm() {
-  if (!agendaFormOpen || !hasPermission(currentProfile, PERMISSIONS.AGENDA_MANAGE)) return "";
-  const selectedDocument = agendaDocuments.find((entry) => entry.id === agendaDraft.documentId) || null;
-  const typeChoice = (value, label) => `<button type="button" class="phase6-type-choice${agendaDraft.itemType === value ? " selected" : ""}" data-phase6-type-choice="${value}" aria-pressed="${agendaDraft.itemType === value ? "true" : "false"}">${label}</button>`;
-  const documentChoices = [
-    `<button type="button" class="phase6-document-choice${agendaDraft.documentId ? "" : " selected"}" data-phase6-document-choice=""><strong>None</strong><span>No Board document attached</span></button>`,
-    ...agendaDocuments
-      .filter((entry) => !entry.agendaMeetingId || entry.agendaMeetingId === meetingId)
-      .map((entry) => `<button type="button" class="phase6-document-choice${agendaDraft.documentId === entry.id ? " selected" : ""}" data-phase6-document-choice="${escapeHtml(entry.id)}"><strong>${escapeHtml(entry.documentNumber || "BDOC")} · ${escapeHtml(entry.title)}</strong><span>Agenda Ready Board document</span></button>`)
-  ].join("");
-  return `
-    <form id="phase6-agenda-form" class="phase6-form">
-      <div class="phase6-form-head"><div><strong>Add agenda item</strong><span>Add an item directly or connect an Agenda Ready Board document.</span></div><button type="button" class="secondary-button" data-phase6-action="close-agenda-form">Close</button></div>
-      <fieldset class="phase6-type-fieldset"><legend>Agenda item type</legend><div class="phase6-type-picker">${typeChoice("business","Business")}${typeChoice("report","Report")}${typeChoice("motion","Motion")}${typeChoice("resolution","Resolution")}${typeChoice("election","Election")}${typeChoice("other","Other")}</div></fieldset>
-      <input type="hidden" name="itemType" value="${escapeHtml(agendaDraft.itemType)}">
-      <input type="hidden" name="documentId" value="${escapeHtml(agendaDraft.documentId)}">
-      <div class="phase6-document-picker">
-        <span class="phase6-field-label">Agenda Ready document</span>
-        <button type="button" class="phase6-document-trigger" data-phase6-action="toggle-document-picker" aria-expanded="${agendaDocumentPickerOpen ? "true" : "false"}">
-          <span><strong>${selectedDocument ? escapeHtml(selectedDocument.documentNumber || "BDOC") : "None"}</strong><small>${selectedDocument ? escapeHtml(selectedDocument.title) : "No Board document attached"}</small></span>
-          <span class="phase6-picker-chevron" aria-hidden="true">${agendaDocumentPickerOpen ? "▲" : "▼"}</span>
-        </button>
-        ${agendaDocumentPickerOpen ? `<div class="phase6-document-menu" role="listbox">${documentChoices}</div>` : ""}
-      </div>
-      <label>Title<input name="title" maxlength="180" value="${escapeHtml(agendaDraft.title)}" required></label>
-      <label>Description<textarea name="description" rows="3" maxlength="1200">${escapeHtml(agendaDraft.description)}</textarea></label>
-      <button type="submit" class="meeting-primary-button phase6-add-agenda-button">Add to Agenda</button>
-      <p id="phase6-agenda-message" class="meeting-form-message"></p>
-    </form>`;
-}
-'''
-          s = s[:start] + replacement + s[end:]
-
-          s = s.replace(
-              'function resetAgendaDraft() {\n  agendaDraft = { itemType: "business", documentId: "", title: "", description: "" };\n}',
-              'function resetAgendaDraft() {\n  agendaDraft = { itemType: "business", documentId: "", title: "", description: "" };\n  agendaDocumentPickerOpen = false;\n}',
-              1
-          )
-
-          anchor = '    const action = event.target.closest("[data-phase6-action]")?.dataset.phase6Action;\n'
-          insert = '''    const typeChoice = event.target.closest("[data-phase6-type-choice]");
-    if (typeChoice) {
-      captureAgendaDraft();
-      agendaDraft.itemType = typeChoice.dataset.phase6TypeChoice || "business";
-      return renderWorkspace();
-    }
-
-    const documentChoice = event.target.closest("[data-phase6-document-choice]");
-    if (documentChoice) {
-      captureAgendaDraft();
-      agendaDraft.documentId = documentChoice.dataset.phase6DocumentChoice || "";
-      agendaDocumentPickerOpen = false;
-      return renderWorkspace();
-    }
-
-'''
-          if anchor not in s:
-              raise SystemExit('click anchor not found')
-          s = s.replace(anchor, insert + anchor, 1)
-
-          s = s.replace(
-              '    if (action === "open-agenda-form") { resetAgendaDraft(); agendaFormOpen = true; return renderWorkspace(); }\n    if (action === "close-agenda-form") { agendaFormOpen = false; resetAgendaDraft(); return renderWorkspace(); }',
-              '    if (action === "open-agenda-form") { resetAgendaDraft(); agendaFormOpen = true; return renderWorkspace(); }\n    if (action === "toggle-document-picker") { captureAgendaDraft(); agendaDocumentPickerOpen = !agendaDocumentPickerOpen; return renderWorkspace(); }\n    if (action === "close-agenda-form") { agendaFormOpen = false; resetAgendaDraft(); return renderWorkspace(); }',
-              1
-          )
-
-          p.write_text(s)
-
-          css = Path('phase6.css')
-          c = css.read_text()
-          c += r'''
-
-/* Deterministic Phase 6 agenda pickers */
-.phase6-type-picker{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px!important}
-.phase6-type-choice{
-  appearance:none!important;display:flex!important;align-items:center!important;justify-content:center!important;
-  min-height:44px!important;padding:10px 13px!important;border:1px solid rgba(216,195,165,.20)!important;
-  border-radius:999px!important;background:rgba(255,255,255,.035)!important;color:#cfc3b4!important;
-  font:inherit!important;font-size:.82rem!important;font-weight:850!important;cursor:pointer!important;
-  pointer-events:auto!important;position:relative!important;z-index:20!important;
-}
-.phase6-type-choice:hover{border-color:rgba(216,195,165,.48)!important;background:rgba(216,195,165,.08)!important;color:#fff0d2!important}
-.phase6-type-choice.selected{border-color:rgba(255,240,210,.72)!important;background:linear-gradient(135deg,rgba(255,240,210,.20),rgba(216,195,165,.10))!important;color:#fff0d2!important;box-shadow:0 0 0 3px rgba(216,195,165,.08)!important}
-.phase6-type-choice:focus-visible{outline:2px solid #fff0d2!important;outline-offset:2px!important}
-
-.phase6-document-picker{display:grid;gap:8px;position:relative;z-index:30}
-.phase6-field-label{color:#d6cabb;font-size:.82rem;font-weight:800}
-.phase6-document-trigger{
-  width:100%;min-height:58px;padding:11px 14px;border:1px solid rgba(216,195,165,.28);border-radius:17px;
-  background:rgba(5,5,5,.92);color:#f7f2ea;display:flex;align-items:center;justify-content:space-between;gap:14px;
-  text-align:left;cursor:pointer;pointer-events:auto!important;position:relative;z-index:31
-}
-.phase6-document-trigger>span:first-child{display:grid;gap:3px;min-width:0}.phase6-document-trigger strong{color:#fff0d2;font-size:.86rem}.phase6-document-trigger small{color:#a99f94;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.phase6-picker-chevron{color:#d8c3a5;font-size:.72rem;flex:0 0 auto}
-.phase6-document-trigger:hover,.phase6-document-trigger[aria-expanded="true"]{border-color:rgba(255,240,210,.62);background:#0d0b09}
-.phase6-document-menu{
-  display:grid;gap:7px;padding:8px;border:1px solid rgba(216,195,165,.24);border-radius:18px;
-  background:#090806;box-shadow:0 22px 60px rgba(0,0,0,.55);position:relative;z-index:40
-}
-.phase6-document-choice{
-  width:100%;display:grid;gap:3px;padding:11px 12px;border:1px solid transparent;border-radius:13px;
-  background:transparent;color:#f7f2ea;text-align:left;cursor:pointer;pointer-events:auto!important;position:relative;z-index:41
-}
-.phase6-document-choice strong{font-size:.84rem}.phase6-document-choice span{color:#978d82;font-size:.75rem}
-.phase6-document-choice:hover{background:rgba(255,255,255,.055);border-color:rgba(216,195,165,.16)}
-.phase6-document-choice.selected{background:rgba(216,195,165,.09);border-color:rgba(216,195,165,.30);color:#fff0d2}
-
-/* Hidden state fields must never inherit the generic visible-input sizing. */
-.phase6-form input[type="hidden"]{display:none!important}
-@media(max-width:680px){.phase6-type-picker{grid-template-columns:repeat(2,minmax(0,1fr))}}
-'''
-          css.write_text(c)
-          PY
-
-      - name: Verify patched source
-        run: |
+          echo "$PATCH_B64" | base64 --decode > /tmp/patch_phase6.py
+          python /tmp/patch_phase6.py
           node --check js/phase6.js
           grep -q 'data-phase6-type-choice' js/phase6.js
           grep -q 'toggle-document-picker' js/phase6.js
           grep -q 'phase6-document-trigger' phase6.css
-
       - name: Commit picker fix
         run: |
           git config user.name "github-actions[bot]"
