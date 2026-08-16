@@ -1,0 +1,126 @@
+.phase6-host{border-top-color:rgba(216,195,165,.16)!important}
+.phase6-section-head p,.phase6-form-head span,.phase6-agenda-head p,.phase6-motion-by,.phase6-vote-meta,.phase5-invite-tools span,.phase5-live-meta{color:var(--muted,#c9beb0)!important}
+
+.phase6-action-metrics>div,
+.phase6-form,
+.phase6-vote-setup,
+.phase6-motion-form,
+.phase6-agenda-item,
+.phase6-motion,
+.phase6-vote-card,
+.phase6-resolution-card,
+.phase6-resolution-text,
+.phase6-ballot-state,
+.phase6-vote-totals span,
+.phase6-recorded-ballots span,
+.phase6-empty,
+.phase5-phase6-placeholder,
+.phase6-phase6-placeholder{
+  background:linear-gradient(180deg,rgba(255,255,255,.075),rgba(255,255,255,.035))!important;
+  border-color:rgba(255,255,255,.10)!important;
+  color:var(--text,#f7f2ea)!important;
+  box-shadow:none!important;
+}
+
+.phase6-form,.phase6-vote-setup,.phase6-motion-form,.phase6-agenda-item,.phase6-vote-card{
+  border-radius:24px!important;
+  padding:1.1rem!important;
+}
+
+.phase6-action-metrics>div{border-radius:20px!important}
+.phase6-action-metrics span,
+.phase6-agenda-head>div>span,
+.phase6-motion-head>div>span,
+.phase6-vote-head>div>span{color:var(--soft,#91877b)!important}
+.phase6-action-metrics strong,
+.phase6-agenda-head strong,
+.phase6-motion-head strong,
+.phase6-vote-head strong,
+.phase6-form-head strong{color:var(--text,#f7f2ea)!important}
+
+.phase6-form label,.phase6-vote-setup label,.phase6-motion-form label,.phase6-resolution-toolbar label{
+  color:var(--muted,#c9beb0)!important;
+}
+.phase6-form input,.phase6-form select,.phase6-form textarea,
+.phase6-vote-setup input,.phase6-vote-setup select,.phase6-vote-setup textarea,
+.phase6-motion-form textarea,.phase6-resolution-toolbar input,.phase6-resolution-toolbar select{
+  background:#0d0c0b!important;
+  color:#fff7e8!important;
+  border:1px solid rgba(216,195,165,.34)!important;
+  border-radius:16px!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.025)!important;
+}
+.phase6-form input:hover,.phase6-form select:hover,.phase6-form textarea:hover,
+.phase6-vote-setup input:hover,.phase6-vote-setup select:hover,.phase6-vote-setup textarea:hover,
+.phase6-motion-form textarea:hover,.phase6-resolution-toolbar input:hover,.phase6-resolution-toolbar select:hover{
+  border-color:rgba(216,195,165,.50)!important;
+}
+.phase6-form input:focus,.phase6-form select:focus,.phase6-form textarea:focus,
+.phase6-vote-setup input:focus,.phase6-vote-setup select:focus,.phase6-vote-setup textarea:focus,
+.phase6-motion-form textarea:focus,.phase6-resolution-toolbar input:focus,.phase6-resolution-toolbar select:focus{
+  border-color:#d8c3a5!important;
+  box-shadow:0 0 0 4px rgba(216,195,165,.14)!important;
+}
+.phase6-form select option,.phase6-vote-setup select option,.phase6-resolution-toolbar select option{
+  background:#0d0c0b!important;
+  color:#fff7e8!important;
+}
+
+.phase6-agenda-item.active,.phase6-vote-card.open,.phase6-resolution-card.selected{
+  border-color:rgba(216,195,165,.48)!important;
+  box-shadow:0 0 0 3px rgba(216,195,165,.08)!important;
+}
+.phase6-agenda-item.completed,.phase6-motion.adopted,.phase6-vote-card.closed.adopted{
+  background:linear-gradient(180deg,rgba(31,122,58,.18),rgba(255,255,255,.03))!important;
+  border-color:rgba(159,242,179,.22)!important;
+}
+.phase6-motion.failed,.phase6-vote-card.closed.failed{
+  background:linear-gradient(180deg,rgba(150,42,42,.17),rgba(255,255,255,.03))!important;
+  border-color:rgba(255,209,209,.20)!important;
+}
+.phase6-motion.voting{
+  background:linear-gradient(180deg,rgba(216,195,165,.10),rgba(255,255,255,.03))!important;
+  border-color:rgba(216,195,165,.28)!important;
+}
+
+.phase6-agenda-head em,.phase6-motion-head em,.phase6-vote-head em,.phase6-resolution-status{
+  background:rgba(216,195,165,.09)!important;
+  color:var(--warm2,#fff0d2)!important;
+  border:1px solid rgba(216,195,165,.18)!important;
+}
+.phase6-document-link{
+  background:rgba(216,195,165,.10)!important;
+  color:var(--warm2,#fff0d2)!important;
+  border:1px solid rgba(216,195,165,.18)!important;
+}
+.phase6-recusal-option{
+  background:rgba(255,255,255,.035)!important;
+  border-color:rgba(255,255,255,.10)!important;
+  color:var(--text,#f7f2ea)!important;
+}
+.phase6-recusal-option small{color:var(--soft,#91877b)!important}
+
+.phase6-ballot-buttons button{
+  background:rgba(216,195,165,.10)!important;
+  color:var(--warm2,#fff0d2)!important;
+  border:1px solid rgba(216,195,165,.18)!important;
+}
+.phase6-ballot-buttons button:nth-child(1){background:rgba(31,122,58,.18)!important;color:#c9f8d5!important;border-color:rgba(159,242,179,.22)!important}
+.phase6-ballot-buttons button:nth-child(2){background:rgba(150,42,42,.18)!important;color:#ffd6d6!important;border-color:rgba(255,209,209,.18)!important}
+.phase6-ballot-state.recorded{background:rgba(31,122,58,.16)!important;color:#c9f8d5!important}
+.phase6-ballot-state.recused{background:rgba(255,184,77,.10)!important;color:#ffe0a8!important}
+.phase6-vote-progress span{color:var(--muted,#c9beb0)!important}
+.phase6-resolution-card span{color:var(--muted,#c9beb0)!important}
+.phase6-resolution-card em.adopted,.phase6-resolution-status.adopted{color:#c9f8d5!important;background:rgba(31,122,58,.18)!important}
+.phase6-resolution-card em.failed,.phase6-resolution-status.failed{color:#ffd6d6!important;background:rgba(150,42,42,.18)!important}
+
+.phase6-quorum-warning{
+  background:rgba(255,184,77,.09)!important;
+  border-color:rgba(255,224,168,.20)!important;
+  color:#ffe0a8!important;
+}
+.phase6-good{color:#9ff2b3!important}.phase6-bad{color:#ffd1d1!important}
+
+/* Keep form controls above decorative glass overlays from the shared theme. */
+.phase6-form,.phase6-vote-setup,.phase6-motion-form{position:relative!important;z-index:2!important}
+.phase6-form *, .phase6-vote-setup *, .phase6-motion-form *{position:relative;z-index:3}
