@@ -36,6 +36,7 @@ if (typeof window !== "undefined") {
     "./phase5.js",
     "./phase5-polish.js",
     "./phase6.js",
+    "./phase6-agenda-draft.js",
     "./phase6-closing-recovery.js",
     "./phase6-guard.js",
     "./phase6-alert.js",
