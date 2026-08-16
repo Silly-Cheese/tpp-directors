@@ -1,0 +1,92 @@
+name: Fix Phase 6 agenda form
+
+on:
+  push:
+    paths:
+      - .github/workflows/fix-phase6-agenda.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Patch Phase 6 agenda state and UI
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          p = Path('js/phase6.js')
+          s = p.read_text()
+
+          old = '''let agendaFormOpen = false;\nlet motionDraftAgendaId = null;'''
+          new = '''let agendaFormOpen = false;\nlet agendaDraft = { itemType: "business", documentId: "", title: "", description: "" };\nlet motionDraftAgendaId = null;'''
+          if old not in s:
+              raise SystemExit('state anchor not found')
+          s = s.replace(old, new, 1)
+
+          old = '''function renderAgendaForm() {\n  if (!agendaFormOpen || !hasPermission(currentProfile, PERMISSIONS.AGENDA_MANAGE)) return "";\n  const options = agendaDocuments\n    .filter((entry) => !entry.agendaMeetingId || entry.agendaMeetingId === meetingId)\n    .map((entry) => `<option value="${escapeHtml(entry.id)}">${escapeHtml(entry.documentNumber || "BDOC")} — ${escapeHtml(entry.title)}</option>`)\n    .join("");\n  return `\n    <form id="phase6-agenda-form" class="phase6-form">\n      <div class="phase6-form-head"><div><strong>Add agenda item</strong><span>Create business directly or attach an Agenda Ready Google-linked Board document.</span></div><button type="button" class="secondary-button" data-phase6-action="close-agenda-form">Close</button></div>\n      <div class="phase6-form-row">\n        <label>Type<select name="itemType"><option value="business">Business</option><option value="report">Report</option><option value="motion">Motion</option><option value="resolution">Resolution</option><option value="election">Election</option><option value="other">Other</option></select></label>\n        <label>Agenda Ready document<select name="documentId"><option value="">None</option>${options}</select></label>\n      </div>\n      <label>Title<input name="title" maxlength="180" required></label>\n      <label>Description<textarea name="description" rows="3" maxlength="1200"></textarea></label>\n      <button type="submit" class="meeting-primary-button">Add to Agenda</button>\n      <p id="phase6-agenda-message" class="meeting-form-message"></p>\n    </form>`;\n}'''
+
+          new = '''function renderAgendaForm() {\n  if (!agendaFormOpen || !hasPermission(currentProfile, PERMISSIONS.AGENDA_MANAGE)) return "";\n  const options = agendaDocuments\n    .filter((entry) => !entry.agendaMeetingId || entry.agendaMeetingId === meetingId)\n    .map((entry) => `<option value="${escapeHtml(entry.id)}"${agendaDraft.documentId === entry.id ? " selected" : ""}>${escapeHtml(entry.documentNumber || "BDOC")} — ${escapeHtml(entry.title)}</option>`)\n    .join("");\n  const typeChoice = (value, label) => `<label class="phase6-type-choice"><input type="radio" name="itemType" value="${value}"${agendaDraft.itemType === value ? " checked" : ""}><span>${label}</span></label>`;\n  return `\n    <form id="phase6-agenda-form" class="phase6-form">\n      <div class="phase6-form-head"><div><strong>Add agenda item</strong><span>Add an item directly or connect an Agenda Ready Board document.</span></div><button type="button" class="secondary-button" data-phase6-action="close-agenda-form">Close</button></div>\n      <fieldset class="phase6-type-fieldset"><legend>Agenda item type</legend><div class="phase6-type-picker">${typeChoice("business","Business")}${typeChoice("report","Report")}${typeChoice("motion","Motion")}${typeChoice("resolution","Resolution")}${typeChoice("election","Election")}${typeChoice("other","Other")}</div></fieldset>\n      <label>Agenda Ready document<select name="documentId"><option value=""${agendaDraft.documentId ? "" : " selected"}>None</option>${options}</select></label>\n      <label>Title<input name="title" maxlength="180" value="${escapeHtml(agendaDraft.title)}" required></label>\n      <label>Description<textarea name="description" rows="3" maxlength="1200">${escapeHtml(agendaDraft.description)}</textarea></label>\n      <button type="submit" class="meeting-primary-button phase6-add-agenda-button">Add to Agenda</button>\n      <p id="phase6-agenda-message" class="meeting-form-message"></p>\n    </form>`;\n}'''
+          if old not in s:
+              raise SystemExit('renderAgendaForm anchor not found')
+          s = s.replace(old, new, 1)
+
+          old = '''function renderWorkspace() {\n  const host = $("#phase6-meeting-workspace");\n  if (!host || host.dataset.meetingId !== meetingId) return;'''
+          new = '''function captureAgendaDraft() {\n  const form = $("#phase6-agenda-form");\n  if (!form) return;\n  const data = new FormData(form);\n  agendaDraft = {\n    itemType: String(data.get("itemType") || agendaDraft.itemType || "business"),\n    documentId: String(data.get("documentId") || ""),\n    title: String(data.get("title") || ""),\n    description: String(data.get("description") || "")\n  };\n}\n\nfunction resetAgendaDraft() {\n  agendaDraft = { itemType: "business", documentId: "", title: "", description: "" };\n}\n\nfunction renderWorkspace() {\n  const host = $("#phase6-meeting-workspace");\n  if (!host || host.dataset.meetingId !== meetingId) return;\n  if (agendaFormOpen) captureAgendaDraft();'''
+          if old not in s:
+              raise SystemExit('renderWorkspace anchor not found')
+          s = s.replace(old, new, 1)
+
+          old = '''  agendaFormOpen = false;\n  motionDraftAgendaId = null;'''
+          new = '''  agendaFormOpen = false;\n  resetAgendaDraft();\n  motionDraftAgendaId = null;'''
+          if old not in s:
+              raise SystemExit('bindMeeting reset anchor not found')
+          s = s.replace(old, new, 1)
+
+          old = '''    agendaFormOpen = false;\n    await refreshAgendaDocuments();'''
+          new = '''    agendaFormOpen = false;\n    resetAgendaDraft();\n    await refreshAgendaDocuments();'''
+          if old not in s:
+              raise SystemExit('submit reset anchor not found')
+          s = s.replace(old, new, 1)
+
+          old = '''    if (action === "open-agenda-form") { agendaFormOpen = true; return renderWorkspace(); }\n    if (action === "close-agenda-form") { agendaFormOpen = false; return renderWorkspace(); }'''
+          new = '''    if (action === "open-agenda-form") { resetAgendaDraft(); agendaFormOpen = true; return renderWorkspace(); }\n    if (action === "close-agenda-form") { agendaFormOpen = false; resetAgendaDraft(); return renderWorkspace(); }'''
+          if old not in s:
+              raise SystemExit('open/close anchor not found')
+          s = s.replace(old, new, 1)
+
+          old = '''  document.addEventListener("input", (event) => {\n    if (event.target.id === "phase6-resolution-search") renderResolutions();\n  });\n  document.addEventListener("change", (event) => {\n    if (event.target.id === "phase6-resolution-status") renderResolutions();\n  });'''
+          new = '''  document.addEventListener("input", (event) => {\n    if (event.target.closest?.("#phase6-agenda-form")) captureAgendaDraft();\n    if (event.target.id === "phase6-resolution-search") renderResolutions();\n  });\n  document.addEventListener("change", (event) => {\n    if (event.target.closest?.("#phase6-agenda-form")) captureAgendaDraft();\n    if (event.target.id === "phase6-resolution-status") renderResolutions();\n  });'''
+          if old not in s:
+              raise SystemExit('input/change anchor not found')
+          s = s.replace(old, new, 1)
+
+          p.write_text(s)
+
+          css = Path('phase6.css')
+          c = css.read_text()
+          c += '''\n\n/* Prayer Project native Phase 6 agenda redesign */\n.phase6-form{background:linear-gradient(145deg,rgba(255,255,255,.055),rgba(216,195,165,.025))!important;border:1px solid rgba(216,195,165,.18)!important;border-radius:28px!important;padding:22px!important;box-shadow:0 22px 70px rgba(0,0,0,.28)!important}\n.phase6-form-head{padding-bottom:17px;border-bottom:1px solid rgba(255,255,255,.075)}\n.phase6-form-head strong{font-size:1.12rem;color:#f7f2ea!important}.phase6-form-head span{color:#bfb3a4!important;line-height:1.5}\n.phase6-type-fieldset{margin:2px 0 4px;padding:0;border:0}.phase6-type-fieldset legend{margin-bottom:10px;color:#d6cabb;font-size:.82rem;font-weight:800}\n.phase6-type-picker{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}\n.phase6-type-choice{display:block!important;cursor:pointer!important}.phase6-type-choice input{position:absolute!important;opacity:0!important;pointer-events:none!important;width:1px!important;height:1px!important}\n.phase6-type-choice span{display:flex;align-items:center;justify-content:center;min-height:43px;padding:9px 11px;border:1px solid rgba(216,195,165,.18);border-radius:999px;background:rgba(255,255,255,.035);color:#cfc3b4;font-size:.81rem;font-weight:800;transition:.16s ease}\n.phase6-type-choice:hover span{border-color:rgba(216,195,165,.42);background:rgba(216,195,165,.07);color:#fff0d2}\n.phase6-type-choice input:checked + span{border-color:rgba(255,240,210,.62);background:linear-gradient(135deg,rgba(255,240,210,.18),rgba(216,195,165,.10));color:#fff0d2;box-shadow:0 0 0 3px rgba(216,195,165,.07)}\n.phase6-type-choice input:focus-visible + span{outline:2px solid #fff0d2;outline-offset:2px}\n.phase6-form>label{gap:8px!important;color:#d6cabb!important;font-size:.82rem!important;font-weight:800!important}\n.phase6-form input:not([type=radio]),.phase6-form select,.phase6-form textarea{background:rgba(5,5,5,.88)!important;border:1px solid rgba(216,195,165,.26)!important;color:#f7f2ea!important;border-radius:17px!important;padding:13px 15px!important}\n.phase6-form input:not([type=radio]):focus,.phase6-form select:focus,.phase6-form textarea:focus{border-color:rgba(255,240,210,.72)!important;box-shadow:0 0 0 4px rgba(216,195,165,.09)!important}\n.phase6-add-agenda-button{min-height:48px!important;border:0!important;border-radius:999px!important;background:linear-gradient(135deg,#fff0d2,#d8c3a5)!important;color:#050505!important;font-weight:900!important;box-shadow:0 14px 38px rgba(216,195,165,.12)!important}\n.phase6-add-agenda-button:hover{transform:translateY(-1px);filter:brightness(1.03)}\n@media(max-width:680px){.phase6-type-picker{grid-template-columns:repeat(2,minmax(0,1fr))}}\n'''
+          css.write_text(c)
+          PY
+
+      - name: Remove obsolete agenda restoration helper from loader
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('js/firebase.js')
+          s = p.read_text().replace('    "./phase6-agenda-draft.js",\n', '')
+          p.write_text(s)
+          PY
+
+      - name: Commit native Phase 6 fix
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add js/phase6.js js/firebase.js phase6.css
+          git commit -m "Fix Phase 6 agenda type state and redesign form"
+          git push origin HEAD:main
