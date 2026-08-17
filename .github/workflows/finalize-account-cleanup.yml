@@ -1,0 +1,34 @@
+name: Finalize account cleanup
+
+on:
+  push:
+    paths:
+      - .github/workflows/finalize-account-cleanup.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Patch duplicate cleanup behavior
+        run: |
+          python .github/scripts/finalize_account_cleanup.py
+          node --check js/founder-admin.js
+          node --check js/app.js
+          grep -q 'duplicateRetired' js/founder-admin.js
+          grep -q 'record.disabled === true' js/app.js
+      - name: Commit duplicate cleanup behavior
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add js/founder-admin.js js/app.js
+          git commit -m "Hide retired duplicates and block disabled logins"
+          git push origin HEAD:main
