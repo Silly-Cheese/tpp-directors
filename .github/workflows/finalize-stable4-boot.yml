@@ -1,0 +1,42 @@
+name: Finalize Stable4 Portal Boot
+
+on:
+  push:
+    paths:
+      - .github/workflows/finalize-stable4-boot.yml
+
+permissions:
+  contents: write
+
+jobs:
+  finalize:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Finalize deterministic release
+        run: |
+          python .github/scripts/finalize_stable4_boot.py
+          node --check js/boot-stable.js
+          node --check js/app.js
+          node --check js/phase5.js
+          node --check js/phase6.js
+          grep -q 'portal-theme-v3.css?v=20260817-stable4' index.html
+          grep -q 'boot-stable.js?v=20260817-stable4' index.html
+          ! grep -q 'src="./js/app.js' index.html
+          ! grep -q 'src="./js/phase5.js' index.html
+          ! grep -q 'src="./js/phase6.js' index.html
+          grep -q 'document.getElementById(`view-${view}`)' js/app.js
+          grep -q 'Mount the real Meeting Room immediately' js/phase5.js
+          grep -q 'select name="itemType"' js/phase6.js
+      - name: Commit stable4 release
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          git commit -m "Finalize deterministic stable4 portal boot"
+          git push origin HEAD:main
