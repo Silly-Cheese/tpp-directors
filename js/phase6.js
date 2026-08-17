@@ -9,18 +9,17 @@ import {
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js";
 import { auth, db } from "./firebase.js";
 import { listBoardDocuments } from "./document-data.js";
-import { calculateQuorum } from "./meeting-data.js";
+import { calculateQuorum } from "./meeting-data.js?v=20260817-stable6";
 import {
   castVote,
   closeVote,
   createAgendaItem,
   createMotion,
   openVote,
-  secondMotion,
   setAgendaItemStatus,
   statusLabel,
   thresholdLabel
-} from "./governance-data.js";
+} from "./governance-data.js?v=20260817-stable6";
 import { hasPermission, PERMISSIONS } from "./permissions.js";
 
 const $ = (selector) => document.querySelector(selector);
@@ -252,23 +251,17 @@ function renderVoteCard(vote) {
 
 function renderMotion(motion) {
   const vote = voteForMotion(motion.id);
-  const canSecond = meeting?.status === "in_session"
-    && motion.status === "pending_second"
-    && motion.movedByUid !== auth.currentUser?.uid
-    && currentAttendance()?.presenceStatus === "present"
-    && currentAttendance()?.votingEligible === true
-    && hasPermission(currentProfile, PERMISSIONS.MOTIONS_SECOND);
+  const effectiveStatus = motion.status === "pending_second" ? "ready" : motion.status;
   const canPush = meeting?.status === "in_session"
-    && motion.status === "ready"
+    && ["ready", "pending_second"].includes(motion.status)
     && hasPermission(currentProfile, PERMISSIONS.VOTES_PUSH)
     && !currentOpenVote();
 
   return `
-    <div class="phase6-motion ${escapeHtml(motion.status)}">
-      <div class="phase6-motion-head"><div><span>${escapeHtml(motion.motionNumber || "MOTION")}</span><strong>${escapeHtml(motion.motionText)}</strong></div><em>${escapeHtml(statusLabel(motion.status))}</em></div>
-      <div class="phase6-motion-by"><span>Moved by ${escapeHtml(motion.movedByName || "Director")}</span><span>${motion.secondedByName ? `Seconded by ${escapeHtml(motion.secondedByName)}` : "Awaiting second"}</span></div>
+    <div class="phase6-motion ${escapeHtml(effectiveStatus)}">
+      <div class="phase6-motion-head"><div><span>${escapeHtml(motion.motionNumber || "MOTION")}</span><strong>${escapeHtml(motion.motionText)}</strong></div><em>${escapeHtml(statusLabel(effectiveStatus))}</em></div>
+      <div class="phase6-motion-by"><span>Moved by ${escapeHtml(motion.movedByName || "Director")}</span><span>${motion.secondedByName ? `Seconded by ${escapeHtml(motion.secondedByName)}` : "Second not required"}</span></div>
       <div class="phase6-inline-actions">
-        ${canSecond ? `<button class="meeting-secondary-button" data-phase6-second-motion="${motion.id}">Second Motion</button>` : ""}
         ${canPush ? `<button class="meeting-primary-button" data-phase6-setup-vote="${motion.id}">Push Vote</button>` : ""}
       </div>
       ${renderVoteSetup(motion)}
@@ -404,7 +397,7 @@ function bindMeeting(meetingIdValue) {
     renderWorkspace();
   });
   attendanceUnsub = onSnapshot(query(collection(db, "meetingAttendance"), where("meetingId", "==", meetingId)), (snapshot) => {
-    attendance = snapshot.docs.map((entry) => ({ id: entry.id, ...entry.data() }));
+    attendance = snapshot.docs.map((entry) => { const record = { id: entry.id, ...entry.data() }; return { ...record, presenceStatus: record.presenceStatus || record.status || "invited" }; });
     renderWorkspace();
   });
   agendaUnsub = onSnapshot(query(collection(db, "agendaItems"), where("meetingId", "==", meetingId)), (snapshot) => {
@@ -478,7 +471,7 @@ function renderResolutions() {
     <dl class="detail-list">
       <div><dt>Meeting</dt><dd>${escapeHtml(selected.meetingNumber || "—")}</dd></div>
       <div><dt>Moved by</dt><dd>${escapeHtml(selected.movedByName || "—")}</dd></div>
-      <div><dt>Seconded by</dt><dd>${escapeHtml(selected.secondedByName || "—")}</dd></div>
+      <div><dt>Second</dt><dd>${escapeHtml(selected.secondedByName || "Not required")}</dd></div>
       <div><dt>Vote</dt><dd>${selected.approveCount || 0} approve · ${selected.opposeCount || 0} oppose · ${selected.abstainCount || 0} abstain</dd></div>
       <div><dt>Threshold</dt><dd>${escapeHtml(thresholdLabel(selected.thresholdMode))}</dd></div>
       <div><dt>Created</dt><dd>${escapeHtml(formatDate(selected.createdAt))}</dd></div>
@@ -610,12 +603,6 @@ function bindGlobalUI() {
 
     const newMotion = event.target.closest("[data-phase6-new-motion]")?.dataset.phase6NewMotion;
     if (newMotion) { motionDraftAgendaId = newMotion; return renderWorkspace(); }
-
-    const secondId = event.target.closest("[data-phase6-second-motion]")?.dataset.phase6SecondMotion;
-    if (secondId) {
-      try { await secondMotion(secondId, currentProfile); } catch (error) { $("#phase6-global-message").textContent = error.message; }
-      return;
-    }
 
     const setupVote = event.target.closest("[data-phase6-setup-vote]")?.dataset.phase6SetupVote;
     if (setupVote) { voteSetupMotionId = setupVote; return renderWorkspace(); }

@@ -84,7 +84,7 @@ export function defaultQuorumFor(eligibleCount) {
 }
 
 export function calculateQuorum(meeting, attendance = []) {
-  const presentEligible = attendance.filter((entry) => entry.votingEligible === true && entry.presenceStatus === "present").length;
+  const presentEligible = attendance.filter((entry) => entry.votingEligible === true && (entry.presenceStatus || entry.status) === "present").length;
   const required = Math.max(0, Number(meeting?.quorumRequired) || 0);
   return {
     presentEligible,
@@ -285,9 +285,10 @@ export async function checkIntoMeeting(meetingId, profile) {
 
   const meeting = meetingSnapshot.data();
   const attendance = attendanceSnapshot.data();
+  const currentPresence = attendance.presenceStatus || attendance.status || "invited";
   if (!["checkin_open", "in_session", "recessed"].includes(meeting.status)) throw new Error("Check-in is not currently open for this meeting.");
-  if (attendance.presenceStatus === "present") return;
-  if (["excused", "absent"].includes(attendance.presenceStatus)) throw new Error("Your attendance status must be changed by an authorized meeting administrator before you can check in.");
+  if (currentPresence === "present") return;
+  if (["excused", "absent"].includes(currentPresence)) throw new Error("Your attendance status must be changed by an authorized meeting administrator before you can check in.");
 
   const patch = {
     presenceStatus: "present",

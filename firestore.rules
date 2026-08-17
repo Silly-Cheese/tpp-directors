@@ -30,7 +30,10 @@ service cloud.firestore {
     function docAfter(id) { return getAfter(/databases/$(database)/documents/documents/$(id)).data; }
     function presentVoter(meetingId, uid) {
       return exists(aPath(meetingId, uid))
-        && get(aPath(meetingId, uid)).data.presenceStatus == 'present'
+        && (
+          (('presenceStatus' in get(aPath(meetingId, uid)).data) && get(aPath(meetingId, uid)).data.presenceStatus == 'present')
+          || (!('presenceStatus' in get(aPath(meetingId, uid)).data) && ('status' in get(aPath(meetingId, uid)).data) && get(aPath(meetingId, uid)).data.status == 'present')
+        )
         && get(aPath(meetingId, uid)).data.votingEligible == true;
     }
     function googleUrl(value) {
@@ -363,7 +366,7 @@ service cloud.firestore {
     function selfCheckIn() {
       return active() && resource.data.directorUid == request.auth.uid
         && meeting(resource.data.meetingId).status in ['checkin_open','in_session','recessed']
-        && resource.data.presenceStatus in ['invited','departed'] && request.resource.data.presenceStatus == 'present'
+        && (((('presenceStatus' in resource.data) && resource.data.presenceStatus in ['invited','departed'])) || ((!('presenceStatus' in resource.data)) && ('status' in resource.data) && resource.data.status in ['invited','departed']))) && request.resource.data.presenceStatus == 'present'
         && request.resource.data.updatedBy == request.auth.uid
         && request.resource.data.updatedAt == request.time && request.resource.data.lastPresenceChangeAt == request.time
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['presenceStatus','checkedInAt','returnedAt','lastPresenceChangeAt','updatedAt','updatedBy']);
@@ -426,7 +429,7 @@ service cloud.firestore {
         && meeting(request.resource.data.meetingId).status == 'in_session' && presentVoter(request.resource.data.meetingId, request.auth.uid)
         && get(agPath(request.resource.data.agendaItemId)).data.meetingId == request.resource.data.meetingId
         && !(get(agPath(request.resource.data.agendaItemId)).data.status in ['completed','tabled','withdrawn'])
-        && request.resource.data.status == 'pending_second' && request.resource.data.movedByUid == request.auth.uid
+        && request.resource.data.status == 'ready' && request.resource.data.movedByUid == request.auth.uid
         && request.resource.data.secondedByUid == null && request.resource.data.voteId == null && request.resource.data.resolutionId == null
         && request.resource.data.createdAt == request.time && request.resource.data.updatedAt == request.time;
     }
@@ -438,7 +441,7 @@ service cloud.firestore {
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','secondedByUid','secondedByName','secondedAt','updatedAt','updatedBy']);
     }
     function startVote(id) {
-      return cap('votes.push') && resource.data.status == 'ready' && meeting(resource.data.meetingId).status == 'in_session'
+      return cap('votes.push') && resource.data.status in ['ready','pending_second'] && meeting(resource.data.meetingId).status == 'in_session'
         && request.resource.data.status == 'voting' && request.resource.data.voteId is string
         && voteAfter(request.resource.data.voteId).motionId == id
         && meetingAfter(resource.data.meetingId).activeVoteId == request.resource.data.voteId

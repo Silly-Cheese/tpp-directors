@@ -21,7 +21,7 @@ import {
   recessMeeting,
   resumeMeeting,
   updateMeetingAttendance
-} from "./meeting-data.js";
+} from "./meeting-data.js?v=20260817-stable6";
 import { hasPermission, PERMISSIONS } from "./permissions.js";
 
 let currentProfile = null;

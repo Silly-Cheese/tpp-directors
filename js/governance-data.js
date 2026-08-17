@@ -9,7 +9,7 @@ import {
   where
 } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js";
 import { auth, db } from "./firebase.js";
-import { calculateQuorum } from "./meeting-data.js";
+import { calculateQuorum } from "./meeting-data.js?v=20260817-stable6";
 import { hasPermission, PERMISSIONS } from "./permissions.js";
 
 export const AGENDA_ITEM_TYPES = Object.freeze(["business", "report", "motion", "resolution", "election", "other"]);
@@ -226,7 +226,7 @@ export async function createMotion(meetingId, agendaItemId, text, profile) {
     getDoc(doc(db, "agendaItems", agendaItemId))
   ]);
   if (!meetingSnapshot.exists() || meetingSnapshot.data().status !== "in_session") throw new Error("Motions can be entered only while the meeting is in session.");
-  if (!attendanceSnapshot.exists() || attendanceSnapshot.data().presenceStatus !== "present" || attendanceSnapshot.data().votingEligible !== true) throw new Error("You must be a present voting-eligible director to make a motion.");
+  if (!attendanceSnapshot.exists() || (attendanceSnapshot.data().presenceStatus || attendanceSnapshot.data().status) !== "present" || attendanceSnapshot.data().votingEligible !== true) throw new Error("You must be a present voting-eligible director to make a motion.");
   if (!agendaSnapshot.exists() || agendaSnapshot.data().meetingId !== meetingId) throw new Error("Agenda item not found for this meeting.");
   if (["completed", "tabled", "withdrawn"].includes(agendaSnapshot.data().status)) throw new Error("This agenda item is closed to new motions.");
 
@@ -238,11 +238,11 @@ export async function createMotion(meetingId, agendaItemId, text, profile) {
       transaction.get(doc(db, "agendaItems", agendaItemId))
     ]);
     if (!freshMeeting.exists() || freshMeeting.data().status !== "in_session") throw new Error("The meeting is no longer in session.");
-    if (!freshAttendance.exists() || freshAttendance.data().presenceStatus !== "present" || freshAttendance.data().votingEligible !== true) throw new Error("You are no longer eligible to make this motion.");
+    if (!freshAttendance.exists() || (freshAttendance.data().presenceStatus || freshAttendance.data().status) !== "present" || freshAttendance.data().votingEligible !== true) throw new Error("You are no longer eligible to make this motion.");
     if (!freshAgenda.exists() || freshAgenda.data().meetingId !== meetingId || ["completed", "tabled", "withdrawn"].includes(freshAgenda.data().status)) throw new Error("This agenda item is closed to new motions.");
     transaction.set(motionRef, {
       motionNumber: motionNumber(motionRef.id), meetingId, agendaItemId, motionText,
-      status: "pending_second", movedByUid: auth.currentUser.uid,
+      status: "ready", movedByUid: auth.currentUser.uid,
       movedByName: profile.displayName || profile.fullName || "Director",
       secondedByUid: null, secondedByName: null, secondedAt: null,
       voteId: null, resolutionId: null, createdAt: serverTimestamp(),
@@ -268,7 +268,7 @@ export async function secondMotion(motionId, profile) {
       transaction.get(doc(db, "meetingAttendance", `${motion.meetingId}_${auth.currentUser.uid}`))
     ]);
     if (!meetingSnapshot.exists() || meetingSnapshot.data().status !== "in_session") throw new Error("The meeting is not currently in session.");
-    if (!attendanceSnapshot.exists() || attendanceSnapshot.data().presenceStatus !== "present" || attendanceSnapshot.data().votingEligible !== true) throw new Error("You must be a present voting-eligible director to second a motion.");
+    if (!attendanceSnapshot.exists() || (attendanceSnapshot.data().presenceStatus || attendanceSnapshot.data().status) !== "present" || attendanceSnapshot.data().votingEligible !== true) throw new Error("You must be a present voting-eligible director to second a motion.");
     transaction.update(motionRef, {
       status: "ready", secondedByUid: auth.currentUser.uid,
       secondedByName: profile.displayName || profile.fullName || "Director",
@@ -284,7 +284,7 @@ export async function openVote(input, profile) {
   const motionSnapshot = await getDoc(doc(db, "motions", motionId));
   if (!motionSnapshot.exists()) throw new Error("Motion not found.");
   const motion = motionSnapshot.data();
-  if (motion.status !== "ready") throw new Error("The motion must have a second before voting opens.");
+  if (!["ready", "pending_second"].includes(motion.status)) throw new Error("This motion is not ready for voting.");
 
   const meetingSnapshot = await getDoc(doc(db, "meetings", motion.meetingId));
   if (!meetingSnapshot.exists()) throw new Error("Board meeting not found.");
@@ -297,7 +297,7 @@ export async function openVote(input, profile) {
   const quorum = calculateQuorum(meeting, attendance);
   if (!quorum.achieved) throw new Error(`Quorum is not present (${quorum.presentEligible}/${quorum.required}).`);
 
-  const presentEligible = attendance.filter((entry) => entry.votingEligible === true && entry.presenceStatus === "present");
+  const presentEligible = attendance.filter((entry) => entry.votingEligible === true && (entry.presenceStatus || entry.status) === "present");
   const presentEligibleUids = new Set(presentEligible.map((entry) => entry.directorUid));
   const recusedDirectorUids = [...new Set((Array.isArray(input.recusedDirectorUids) ? input.recusedDirectorUids : []).map(String))].filter((uid) => presentEligibleUids.has(uid));
   const recusedSet = new Set(recusedDirectorUids);
@@ -315,7 +315,7 @@ export async function openVote(input, profile) {
     ]);
     if (!freshMeetingSnapshot.exists() || freshMeetingSnapshot.data().status !== "in_session") throw new Error("The meeting is no longer in session.");
     if (freshMeetingSnapshot.data().activeVoteId) throw new Error("Another Board vote is already open for this meeting.");
-    if (!freshMotionSnapshot.exists() || freshMotionSnapshot.data().status !== "ready") throw new Error("This motion is no longer ready for voting.");
+    if (!freshMotionSnapshot.exists() || !["ready", "pending_second"].includes(freshMotionSnapshot.data().status)) throw new Error("This motion is no longer ready for voting.");
 
     transaction.set(voteRef, {
       voteNumber: voteNumber(voteRef.id), meetingId: motion.meetingId,
@@ -358,7 +358,7 @@ export async function castVote(voteId, choice, profile) {
   if (vote.status !== "open") throw new Error("This vote is no longer accepting ballots.");
   if (!Array.isArray(vote.eligibleVoterUids) || !vote.eligibleVoterUids.includes(auth.currentUser.uid)) throw new Error("You are not eligible to cast this ballot.");
   const attendanceSnapshot = await getDoc(doc(db, "meetingAttendance", `${vote.meetingId}_${auth.currentUser.uid}`));
-  if (!attendanceSnapshot.exists() || attendanceSnapshot.data().presenceStatus !== "present") throw new Error("You must currently be marked present to cast this ballot.");
+  if (!attendanceSnapshot.exists() || (attendanceSnapshot.data().presenceStatus || attendanceSnapshot.data().status) !== "present") throw new Error("You must currently be marked present to cast this ballot.");
   const ballotRef = doc(db, "voteBallots", ballotId(voteId, auth.currentUser.uid));
   if ((await getDoc(ballotRef)).exists()) throw new Error("Your ballot has already been recorded and cannot be changed.");
   await runTransaction(db, async (transaction) => {
@@ -369,7 +369,7 @@ export async function castVote(voteId, choice, profile) {
     ]);
     if (!freshVote.exists() || freshVote.data().status !== "open") throw new Error("This vote is no longer accepting ballots.");
     if (!freshVote.data().eligibleVoterUids?.includes(auth.currentUser.uid)) throw new Error("You are not eligible to cast this ballot.");
-    if (!freshAttendance.exists() || freshAttendance.data().presenceStatus !== "present" || freshAttendance.data().votingEligible !== true) throw new Error("You must currently be present and voting eligible.");
+    if (!freshAttendance.exists() || (freshAttendance.data().presenceStatus || freshAttendance.data().status) !== "present" || freshAttendance.data().votingEligible !== true) throw new Error("You must currently be present and voting eligible.");
     if (existingBallot.exists()) throw new Error("Your ballot has already been recorded and cannot be changed.");
     transaction.set(ballotRef, {
       voteId, meetingId: vote.meetingId, voterUid: auth.currentUser.uid,
