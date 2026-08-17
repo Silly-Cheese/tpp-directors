@@ -103,15 +103,19 @@ export async function createBoardMeeting(input, profile, directoryEntries = []) 
   const title = String(input.title || "").trim();
   if (!title) throw new Error("Enter a meeting title.");
 
-  const meetingType = VALID_TYPES.has(input.meetingType) ? input.meetingType : "regular";
-  const scheduledFor = String(input.scheduledFor || "").trim();
+  const requestedMeetingType = input.meetingType ?? input.type;
+  const meetingType = VALID_TYPES.has(requestedMeetingType) ? requestedMeetingType : "regular";
+  const scheduledFor = String(input.scheduledFor ?? input.scheduledStart ?? "").trim();
   if (!scheduledFor || Number.isNaN(Date.parse(scheduledFor))) throw new Error("Choose a valid meeting date and time.");
 
   const requestedUids = [...new Set((Array.isArray(input.invitedDirectorUids) ? input.invitedDirectorUids : []).map(String))];
   if (!requestedUids.length) throw new Error("Invite at least one director to the meeting.");
   if (requestedUids.length > 100) throw new Error("A meeting may not contain more than 100 invited directors.");
 
-  const directoryByUid = new Map(directoryEntries.map((entry) => [entry.uid, entry]));
+  const effectiveDirectory = Array.isArray(directoryEntries) && directoryEntries.length
+    ? directoryEntries
+    : (Array.isArray(input.directory) ? input.directory : []);
+  const directoryByUid = new Map(effectiveDirectory.map((entry) => [entry.uid, entry]));
   const invitees = requestedUids.map((uid) => directoryByUid.get(uid)).filter(Boolean);
   if (invitees.length !== requestedUids.length) throw new Error("One or more selected directors are no longer available in the Board directory.");
 
@@ -130,8 +134,9 @@ export async function createBoardMeeting(input, profile, directoryEntries = []) 
     title,
     meetingType,
     scheduledFor,
-    locationMode: ["in_person", "virtual", "hybrid"].includes(input.locationMode) ? input.locationMode : "in_person",
-    locationLabel: String(input.locationLabel || "").trim() || null,
+    locationMode: ["in_person", "virtual", "hybrid"].includes(input.locationMode ?? input.mode) ? (input.locationMode ?? input.mode) : "in_person",
+    locationLabel: String(input.locationLabel ?? input.location ?? "").trim() || null,
+    notes: String(input.notes || "").trim() || null,
     status: "scheduled",
     invitedDirectorUids: invitees.map((entry) => entry.uid),
     eligibleVotingDirectorUids: eligibleInvitees.map((entry) => entry.uid),

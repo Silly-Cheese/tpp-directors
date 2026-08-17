@@ -208,3 +208,40 @@ footer{display:none!important}
   .phase6-type-picker{grid-template-columns:repeat(2,minmax(0,1fr))!important}
   input,textarea,select{font-size:16px!important}
 }
+
+
+/* ===== Stable5: eliminate all surviving light-theme islands ===== */
+.empty-state,.phase5-empty,.phase6-empty,.phase8-empty,.phase9-empty,.phase10-empty,
+.phase10-status>div,.phase10-check,.phase10-item,.phase10-list a,.phase10-list button,
+.phase10-gate,.phase10-gate.ready,.phase10-gate.blocked,
+.meeting-self-checkin,.activation-result,.recovery-result,.policy-box,.review-note-box{
+  background:#11100e!important;
+  color:var(--text)!important;
+  border-color:#4a3b2c!important;
+}
+.empty-state,.empty-state *,.phase5-empty,.phase5-empty *,.phase6-empty,.phase6-empty *,
+.phase8-empty,.phase8-empty *,.phase9-empty,.phase9-empty *,.phase10-empty,.phase10-empty *,
+.phase10-status>div *,.phase10-check *,.phase10-item *,.phase10-list a *,.phase10-list button *,
+.phase10-gate *,.meeting-self-checkin *{
+  color:var(--text2)!important;
+  -webkit-text-fill-color:currentColor!important;
+  opacity:1!important;
+}
+.phase10-status>div strong,.phase10-check strong,.phase10-gate strong,.meeting-self-checkin strong{color:var(--text)!important}
+.phase10-status>div span,.phase10-status>div small,.phase10-check span,.phase10-item span{color:var(--text3)!important}
+.phase10-gate.ready{border-color:#315c3a!important;background:#0d1a10!important}
+.phase10-gate.ready,.phase10-gate.ready *{color:#c8f7d1!important}
+.phase10-gate.blocked{border-color:#7b5930!important;background:#1c140b!important}
+.phase10-gate.blocked,.phase10-gate.blocked *{color:#ffe0a8!important}
+.phase10-badge.draft,.phase10-badge.ready_for_launch,.phase10-badge.launched,.count-badge,.status-pill{
+  background:#211a14!important;color:var(--accent2)!important;border:1px solid var(--border)!important;
+}
+.phase10-tabs button{background:#0d0c0a!important;color:var(--text2)!important;border:1px solid #3b3024!important}
+.phase10-tabs button.active{background:#172238!important;color:#fff!important;border-color:#243653!important}
+
+/* Light browser autofill must not reintroduce white fields. */
+input:-webkit-autofill,input:-webkit-autofill:hover,input:-webkit-autofill:focus,textarea:-webkit-autofill,select:-webkit-autofill{
+  -webkit-box-shadow:0 0 0 1000px var(--field) inset!important;
+  -webkit-text-fill-color:var(--text)!important;
+  caret-color:var(--accent2)!important;
+}

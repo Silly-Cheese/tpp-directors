@@ -63,6 +63,30 @@ function humanize(value = "") {
   return String(value || "—").replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
+function normalizeMeetingRecord(record = {}) {
+  const eligible = Array.isArray(record.eligibleVotingDirectorUids)
+    ? record.eligibleVotingDirectorUids
+    : (Array.isArray(record.votingEligibleUids) ? record.votingEligibleUids : []);
+  return {
+    ...record,
+    meetingType: record.meetingType || record.type || "regular",
+    type: record.type || record.meetingType || "regular",
+    scheduledFor: record.scheduledFor || record.scheduledStart || null,
+    scheduledStart: record.scheduledStart || record.scheduledFor || null,
+    locationMode: record.locationMode || record.mode || "in_person",
+    mode: record.mode || record.locationMode || "in_person",
+    locationLabel: record.locationLabel ?? record.location ?? null,
+    location: record.location ?? record.locationLabel ?? null,
+    eligibleVotingDirectorUids: eligible,
+    votingEligibleUids: Array.isArray(record.votingEligibleUids) ? record.votingEligibleUids : eligible
+  };
+}
+
+function normalizeAttendanceRecord(record = {}) {
+  const presence = record.presenceStatus || record.status || "invited";
+  return { ...record, presenceStatus: presence, status: presence };
+}
+
 function setMessage(element, message = "") {
   if (element) element.textContent = message;
 }
@@ -271,7 +295,7 @@ function subscribeAttendance(meetingId) {
   if (!meetingId) return;
   const attendanceQuery = query(collection(db, "meetingAttendance"), where("meetingId", "==", meetingId));
   attendanceUnsubscribe = onSnapshot(attendanceQuery, (snapshot) => {
-    selectedAttendance = snapshot.docs.map((entry) => ({ id: entry.id, ...entry.data() }))
+    selectedAttendance = snapshot.docs.map((entry) => normalizeAttendanceRecord({ id: entry.id, ...entry.data() }))
       .sort((a, b) => String(a.directorName || "").localeCompare(String(b.directorName || "")));
     renderMeetingDetail();
   }, (error) => {
@@ -283,7 +307,7 @@ function subscribeAttendance(meetingId) {
 function subscribeMeetings() {
   if (meetingsUnsubscribe) meetingsUnsubscribe();
   meetingsUnsubscribe = onSnapshot(collection(db, "meetings"), (snapshot) => {
-    meetings = snapshot.docs.map((entry) => ({ id: entry.id, ...entry.data() }))
+    meetings = snapshot.docs.map((entry) => normalizeMeetingRecord({ id: entry.id, ...entry.data() }))
       .sort((a, b) => timestampValue(b.scheduledStart) - timestampValue(a.scheduledStart));
     if (selectedMeetingId && !meetings.some((meeting) => meeting.id === selectedMeetingId)) selectedMeetingId = null;
     if (!selectedMeetingId && meetings.length) selectedMeetingId = meetings.find((meeting) => ["checkin_open", "in_session", "recessed"].includes(meeting.status))?.id || meetings[0].id;
@@ -326,15 +350,14 @@ async function handleCreateMeeting(event) {
   try {
     const created = await createBoardMeeting({
       title: data.get("title"),
-      type: data.get("type"),
-      scheduledStart: data.get("scheduledStart"),
-      mode: data.get("mode"),
-      location: data.get("location"),
+      meetingType: data.get("type"),
+      scheduledFor: data.get("scheduledStart"),
+      locationMode: data.get("mode"),
+      locationLabel: data.get("location"),
       quorumRequired: data.get("quorumRequired"),
       notes: data.get("notes"),
-      invitedDirectorUids,
-      directory
-    }, currentProfile);
+      invitedDirectorUids
+    }, currentProfile, directory);
     form.reset();
     renderInviteGrid();
     $("#phase5-create-panel").hidden = true;
