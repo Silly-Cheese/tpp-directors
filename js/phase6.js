@@ -330,7 +330,7 @@ function renderWorkspace({ captureDraft = true } = {}) {
   host.innerHTML = `
     <div class="phase6-section-head">
       <div><p class="eyebrow">PHASE 6 · LIVE BOARD ACTIONS</p><h2>Agenda, Motions & Voting</h2><p>Board actions are tied to this meeting, its live attendance roster, and immutable ballots.</p></div>
-      ${hasPermission(currentProfile, PERMISSIONS.AGENDA_MANAGE) && !["adjourned", "cancelled"].includes(meeting.status) ? `<button class="meeting-primary-button" data-phase6-action="open-agenda-form">Add Agenda Item</button>` : ""}
+      ${hasPermission(currentProfile, PERMISSIONS.AGENDA_MANAGE) ? (["adjourned", "cancelled"].includes(meeting.status) ? `<button class="meeting-secondary-button" type="button" disabled title="Agenda changes are locked after a meeting is closed.">Meeting Closed</button>` : `<button class="meeting-primary-button" data-phase6-action="open-agenda-form">Add Agenda Item</button>`) : ""}
     </div>
     <div class="phase6-action-metrics">
       <div><span>Agenda Items</span><strong>${agendaItems.length}</strong></div>
