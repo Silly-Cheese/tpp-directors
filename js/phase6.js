@@ -317,10 +317,10 @@ function resetAgendaDraft() {
   agendaDocumentPickerOpen = false;
 }
 
-function renderWorkspace() {
+function renderWorkspace({ captureDraft = true } = {}) {
   const host = $("#phase6-meeting-workspace");
   if (!host || host.dataset.meetingId !== meetingId) return;
-  if (agendaFormOpen) captureAgendaDraft();
+  if (agendaFormOpen && captureDraft) captureAgendaDraft();
   if (!currentProfile || !meeting) {
     host.innerHTML = '<div class="phase6-empty">Loading Board actions…</div>';
     return;
@@ -591,7 +591,7 @@ function bindGlobalUI() {
     if (typeChoice) {
       captureAgendaDraft();
       agendaDraft.itemType = typeChoice.dataset.phase6TypeChoice || "business";
-      return renderWorkspace();
+      return renderWorkspace({ captureDraft: false });
     }
 
     const documentChoice = event.target.closest("[data-phase6-document-choice]");
@@ -599,7 +599,7 @@ function bindGlobalUI() {
       captureAgendaDraft();
       agendaDraft.documentId = documentChoice.dataset.phase6DocumentChoice || "";
       agendaDocumentPickerOpen = false;
-      return renderWorkspace();
+      return renderWorkspace({ captureDraft: false });
     }
 
     const action = event.target.closest("[data-phase6-action]")?.dataset.phase6Action;
