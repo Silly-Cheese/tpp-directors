@@ -199,6 +199,7 @@ export async function listDirectorAccounts(founderProfile) {
   const snapshot = await getDocs(collection(db, "directors"));
   return snapshot.docs
     .map((entry) => ({ uid: entry.id, ...entry.data() }))
+    .filter((entry) => entry.duplicateRetired !== true)
     .sort((a, b) => String(a.directorNumber ?? "").localeCompare(String(b.directorNumber ?? "")));
 }
 

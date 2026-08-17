@@ -416,6 +416,7 @@ async function lookupName() {
     const loginKey = await buildLoginKey(fullName);
     const record = await loadLoginRecord(loginKey);
     if (!record?.authEmail) throw new Error("The portal could not continue with that Board identity.");
+    if (record.disabled === true) throw new Error("This Board account has been retired. Contact the Founder Director if a replacement account is needed.");
     pendingLogin = { fullName, loginKey, ...record };
     nameField.hidden = true;
     loginBackButton.hidden = false;
