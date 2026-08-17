@@ -1,0 +1,34 @@
+name: Fix Dynamic Portal Router
+
+on:
+  push:
+    paths:
+      - .github/workflows/fix-dynamic-router.yml
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Patch router and verify
+        run: |
+          python .github/scripts/fix_dynamic_router.py
+          node --check js/app.js
+          grep -q 'document.getElementById(`view-${view}`)' js/app.js
+          grep -q 'document.querySelectorAll(".portal-section")' js/app.js
+          grep -q 'This module did not finish loading' js/app.js
+      - name: Commit router fix
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add js/app.js
+          git commit -m "Route Meetings and dynamic governance views correctly"
+          git push origin HEAD:main
