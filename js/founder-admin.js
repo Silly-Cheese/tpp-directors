@@ -59,7 +59,13 @@ export async function createDirectorAccount(input, founderProfile) {
   const loginRef = doc(db, "loginDirectory", loginKey);
   const existingLogin = await getDoc(loginRef);
   if (existingLogin.exists()) {
-    throw new Error("A Board account already uses that full name. Exact duplicate names require a separate identity workflow.");
+    const existingUid = existingLogin.data()?.directorUid || null;
+    const existingDirector = existingUid ? await getDoc(doc(db, "directors", existingUid)) : null;
+    const reusable = existingLogin.data()?.disabled === true
+      || (existingDirector?.exists() && ["archived", "former_director"].includes(existingDirector.data()?.accountStatus));
+    if (!reusable) {
+      throw new Error("A Board account already uses that full name. Open that existing account in Founder Control instead of creating a duplicate.");
+    }
   }
 
   const activationCode = generateActivationCode();
@@ -78,6 +84,7 @@ export async function createDirectorAccount(input, founderProfile) {
     const directorRef = doc(db, "directors", createdUser.uid);
     const directoryRef = doc(db, "boardDirectory", createdUser.uid);
     const counterRef = doc(db, "system", "counters");
+    const activationVaultRef = doc(db, "activationVault", createdUser.uid);
     const auditRef = doc(collection(db, "auditEvents"));
     const actorUid = auth.currentUser.uid;
 
@@ -122,8 +129,24 @@ export async function createDirectorAccount(input, founderProfile) {
         directorUid: createdUser.uid,
         authEmail,
         activationRequired: true,
+        disabled: false,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp()
+      });
+
+      transaction.set(activationVaultRef, {
+        directorUid: createdUser.uid,
+        directorNumber,
+        fullName,
+        loginKey,
+        authEmail,
+        activationCode,
+        purpose: "initial_activation",
+        status: "available",
+        createdAt: serverTimestamp(),
+        createdBy: actorUid,
+        updatedAt: serverTimestamp(),
+        updatedBy: actorUid
       });
 
       transaction.set(counterRef, {
@@ -282,6 +305,7 @@ export async function prepareDirectorPinReset(uid, founderProfile) {
   const activationCode = generateActivationCode();
   const temporaryAuthPassword = buildActivationPassword(activationCode);
   const login = loginSnapshot.data();
+  const activationVaultRef = doc(db, "activationVault", uid);
   const auditRef = doc(collection(db, "auditEvents"));
   const batch = writeBatch(db);
 
@@ -295,6 +319,21 @@ export async function prepareDirectorPinReset(uid, founderProfile) {
     pinResetPreparedAt: serverTimestamp(),
     updatedAt: serverTimestamp()
   });
+  batch.set(activationVaultRef, {
+    directorUid: uid,
+    directorNumber: director.directorNumber || null,
+    fullName: director.fullName || "Director",
+    loginKey: director.loginKey,
+    authEmail: login.authEmail,
+    activationCode,
+    temporaryAuthPassword,
+    purpose: "pin_reset",
+    status: "available",
+    createdAt: serverTimestamp(),
+    createdBy: auth.currentUser.uid,
+    updatedAt: serverTimestamp(),
+    updatedBy: auth.currentUser.uid
+  }, { merge: true });
   batch.set(auditRef, {
     category: "account",
     action: "director.pin_reset.prepared",

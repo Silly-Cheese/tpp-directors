@@ -854,6 +854,11 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
+    match /activationVault/{id} {
+      allow get, list, create, update: if founder();
+      allow delete: if false;
+    }
+
     match /system/{id} {
       allow read, update: if founder();
       allow create: if founder() || founderBootstrapCounter(id);
