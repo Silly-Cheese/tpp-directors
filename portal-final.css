@@ -1,0 +1,259 @@
+/*
+ * The Prayer Project Board Portal — authoritative final UI layer.
+ * Loaded AFTER every phase stylesheet. This file intentionally owns the visual
+ * system so legacy phase CSS cannot reintroduce light cards, weak contrast,
+ * inconsistent buttons, or unreadable form controls.
+ */
+:root{
+  --tpp-bg:#030303;
+  --tpp-bg-2:#080706;
+  --tpp-surface:#0d0c0a;
+  --tpp-surface-2:#14110e;
+  --tpp-surface-3:#1b1713;
+  --tpp-line:rgba(238,218,188,.18);
+  --tpp-line-strong:rgba(238,218,188,.36);
+  --tpp-text:#fffaf2;
+  --tpp-text-2:#ded4c7;
+  --tpp-text-3:#a99e90;
+  --tpp-accent:#e4cda8;
+  --tpp-accent-2:#fff0d2;
+  --tpp-success:#9fe5ad;
+  --tpp-warning:#ffd38a;
+  --tpp-danger:#ff9c9c;
+  --tpp-shadow:0 20px 55px rgba(0,0,0,.34);
+  --tpp-radius:20px;
+  --tpp-radius-sm:14px;
+  --panel:var(--tpp-surface);
+  --border:var(--tpp-line);
+  --muted:var(--tpp-text-3);
+  --ink:var(--tpp-text);
+  --canvas:var(--tpp-bg);
+}
+
+html{background:var(--tpp-bg)!important;color-scheme:dark}
+body{
+  background:
+    radial-gradient(circle at 55% -12%,rgba(228,205,168,.11),transparent 34rem),
+    linear-gradient(180deg,#020202,#050403 50%,#020202)!important;
+  color:var(--tpp-text)!important;
+}
+
+/* ===== Shell / Navigation ===== */
+.site-header{
+  background:rgba(2,2,2,.94)!important;
+  border-bottom:1px solid var(--tpp-line)!important;
+  box-shadow:0 8px 30px rgba(0,0,0,.18)!important;
+}
+.sidebar{
+  background:rgba(4,4,4,.96)!important;
+  border-right:1px solid var(--tpp-line)!important;
+}
+.portal-main{background:transparent!important;color:var(--tpp-text)!important}
+.nav-item{
+  color:var(--tpp-text-2)!important;
+  border:1px solid transparent!important;
+  background:transparent!important;
+}
+.nav-item:hover{
+  color:var(--tpp-text)!important;
+  background:rgba(255,255,255,.045)!important;
+  border-color:rgba(255,255,255,.06)!important;
+}
+.nav-item.active{
+  color:var(--tpp-accent-2)!important;
+  background:rgba(228,205,168,.10)!important;
+  border-color:rgba(228,205,168,.25)!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.025)!important;
+}
+
+h1,h2,h3,h4,strong{color:var(--tpp-text)!important}
+p,small,.muted,.panel-copy,.long-copy{color:var(--tpp-text-2)!important}
+.eyebrow{color:var(--tpp-accent-2)!important}
+
+/* ===== Universal panels/cards ===== */
+.panel,.metric,.meeting-card,.phase6-form,.phase6-agenda-item,.phase6-motion,.phase6-vote-card,
+.phase7-minutes-form,.phase7-minutes-readonly>div,.phase7-record-metrics>div,.phase7-record-card,.phase7-minutes-snapshot,
+.phase8-card,.phase8-form,.phase8-metrics>div,
+.phase9-tabs,.phase9-metrics>div,.phase9-health-card,.phase9-emergency-card,.phase9-review-card,.phase9-settings-card,.phase9-auditor-card,.phase9-audit-row,.phase9-incident,.phase9-empty,
+.phase10-card,.phase10-panel,.launch-card,.security-card,.governance-card,
+.document-card,.director-card,.notice-item,.compact-row,.inbox-row,.directory-metrics>div{
+  background:linear-gradient(180deg,rgba(255,255,255,.050),rgba(255,255,255,.022))!important;
+  border:1px solid var(--tpp-line)!important;
+  color:var(--tpp-text)!important;
+  box-shadow:var(--tpp-shadow)!important;
+}
+
+.panel,.phase6-form,.phase7-minutes-form,.phase8-form,.phase9-health-card,.phase9-emergency-card,.phase9-review-card,.phase9-settings-card,.phase9-auditor-card,.phase9-incident{
+  border-radius:var(--tpp-radius)!important;
+}
+.metric,.phase8-metrics>div,.phase9-metrics>div,.phase7-record-metrics>div,.phase7-minutes-readonly>div{
+  border-radius:var(--tpp-radius-sm)!important;
+}
+
+/* Remove old white/light backgrounds aggressively. */
+.phase7-minutes-form,.phase7-minutes-readonly>div,.phase7-record-metrics>div,.phase7-record-card,
+.phase8-card,.phase8-form,.phase8-metrics>div,.phase8-inline button,
+.phase9-tabs,.phase9-metrics>div,.phase9-mini-list>div,.phase9-audit-row,.phase9-empty,
+.phase6-form,.phase6-agenda-item,.phase6-motion,.phase6-vote-card{
+  background-color:transparent!important;
+}
+
+/* ===== Inputs / textareas / selects ===== */
+input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]),
+textarea,select,
+.phase6-form input:not([type="hidden"]),.phase6-form textarea,.phase6-form select,
+.phase7-minutes-form input,.phase7-minutes-form textarea,.phase7-record-toolbar input,
+.phase8-form input:not([type="checkbox"]):not([type="radio"]),.phase8-form textarea,.phase8-form select,
+.phase9-emergency-card textarea,.phase9-settings-card textarea,.phase9-settings-card input,.phase9-incident textarea,.phase9-incident select,.phase9-incident-layout input,.phase9-incident-layout select,.phase9-incident-layout textarea,.phase9-review-card textarea,.phase9-review-card select,.phase9-toolbar input,.phase9-toolbar select{
+  box-sizing:border-box!important;
+  width:100%!important;
+  min-height:46px!important;
+  padding:11px 13px!important;
+  border-radius:13px!important;
+  border:1px solid rgba(228,205,168,.30)!important;
+  background:#0a0908!important;
+  color:var(--tpp-text)!important;
+  -webkit-text-fill-color:var(--tpp-text)!important;
+  caret-color:var(--tpp-accent-2)!important;
+  font:inherit!important;
+  outline:none!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.02)!important;
+}
+textarea{min-height:92px!important;resize:vertical!important;line-height:1.5!important}
+input::placeholder,textarea::placeholder{color:#8f857a!important;-webkit-text-fill-color:#8f857a!important;opacity:1!important}
+input:focus,textarea:focus,select:focus{
+  border-color:var(--tpp-accent-2)!important;
+  box-shadow:0 0 0 3px rgba(228,205,168,.13)!important;
+  background:#100e0c!important;
+}
+select{cursor:pointer!important;color-scheme:dark!important}
+select option,select optgroup{background:#14110e!important;color:#fffaf2!important}
+label,legend,.phase6-field-label{color:var(--tpp-text-2)!important;font-weight:750!important}
+input[type="checkbox"],input[type="radio"]{accent-color:var(--tpp-accent)!important}
+input:disabled,textarea:disabled,select:disabled{opacity:.6!important;cursor:not-allowed!important}
+
+/* ===== Buttons ===== */
+button,.btn,.primary-button,.secondary-button,.meeting-primary-button,.meeting-secondary-button,.meeting-danger-button,
+.phase7-actions button,.phase7-certify-button,.phase7-record-actions button,.phase7-record-actions a,
+.phase8-tabs button,.phase8-inline button,.phase9-tabs button{
+  font:inherit!important;
+  min-height:42px;
+  border-radius:999px!important;
+  cursor:pointer!important;
+  transition:background .16s ease,border-color .16s ease,color .16s ease,transform .16s ease!important;
+}
+button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{
+  outline:2px solid var(--tpp-accent-2)!important;
+  outline-offset:2px!important;
+}
+.primary-button,.meeting-primary-button,.phase6-add-agenda-button,.phase7-certify-button{
+  border:1px solid transparent!important;
+  background:linear-gradient(135deg,var(--tpp-accent-2),var(--tpp-accent))!important;
+  color:#100d09!important;
+  font-weight:900!important;
+  box-shadow:0 10px 28px rgba(228,205,168,.13)!important;
+}
+.primary-button:hover,.meeting-primary-button:hover,.phase6-add-agenda-button:hover,.phase7-certify-button:hover{transform:translateY(-1px)!important;filter:brightness(1.035)}
+.secondary-button,.meeting-secondary-button,.table-action,.phase8-inline button,.phase7-record-actions button,.phase7-record-actions a{
+  border:1px solid var(--tpp-line-strong)!important;
+  background:rgba(255,255,255,.035)!important;
+  color:var(--tpp-text)!important;
+}
+.secondary-button:hover,.meeting-secondary-button:hover,.table-action:hover,.phase8-inline button:hover,.phase7-record-actions button:hover,.phase7-record-actions a:hover{
+  background:rgba(228,205,168,.09)!important;
+  border-color:rgba(228,205,168,.52)!important;
+  color:var(--tpp-accent-2)!important;
+}
+.meeting-danger-button,.phase9-freeze{
+  border:1px solid rgba(255,156,156,.34)!important;
+  background:rgba(180,35,24,.16)!important;
+  color:#ffd0d0!important;
+}
+.meeting-danger-button:hover,.phase9-freeze:hover{background:rgba(180,35,24,.28)!important}
+.phase9-lift{background:rgba(49,145,81,.18)!important;border:1px solid rgba(159,229,173,.32)!important;color:#caffd4!important}
+button:disabled{opacity:.48!important;cursor:not-allowed!important;transform:none!important}
+
+/* ===== Phase 5 meeting room ===== */
+.meeting-shell,.meeting-grid,.meeting-control-center{color:var(--tpp-text)!important}
+.meeting-table,.portal-main table{background:transparent!important;color:var(--tpp-text)!important;border-color:var(--tpp-line)!important}
+.meeting-table th,.portal-main th{background:rgba(255,255,255,.035)!important;color:var(--tpp-text-3)!important;border-color:var(--tpp-line)!important}
+.meeting-table td,.portal-main td{color:var(--tpp-text-2)!important;border-color:rgba(255,255,255,.07)!important}
+
+/* ===== Phase 6 — Agenda, Motions, Voting ===== */
+.phase6-form{padding:20px!important;display:grid!important;gap:16px!important}
+.phase6-form-head{display:flex!important;align-items:flex-start!important;justify-content:space-between!important;gap:16px!important}
+.phase6-form-head span{color:var(--tpp-text-2)!important}
+.phase6-type-fieldset{border:0!important;padding:0!important;margin:0!important;min-width:0!important}
+.phase6-type-fieldset legend{margin-bottom:8px!important;padding:0!important}
+.phase6-type-picker{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:8px!important}
+.phase6-type-choice{
+  appearance:none!important;
+  position:relative!important;
+  z-index:5!important;
+  pointer-events:auto!important;
+  min-height:44px!important;
+  border:1px solid rgba(228,205,168,.25)!important;
+  background:#0a0908!important;
+  color:var(--tpp-text-2)!important;
+  font-weight:850!important;
+  box-shadow:none!important;
+}
+.phase6-type-choice:hover{background:rgba(228,205,168,.08)!important;color:var(--tpp-accent-2)!important;border-color:rgba(228,205,168,.48)!important}
+.phase6-type-choice.selected,
+.phase6-type-choice[aria-pressed="true"]{
+  background:linear-gradient(135deg,rgba(255,240,210,.18),rgba(228,205,168,.08))!important;
+  color:var(--tpp-accent-2)!important;
+  border-color:rgba(255,240,210,.72)!important;
+  box-shadow:0 0 0 2px rgba(228,205,168,.08)!important;
+}
+.phase6-document-picker{position:relative!important;z-index:7!important;display:grid!important;gap:8px!important}
+.phase6-document-trigger{
+  position:relative!important;z-index:8!important;pointer-events:auto!important;
+  width:100%!important;min-height:58px!important;padding:11px 14px!important;
+  border:1px solid rgba(228,205,168,.30)!important;border-radius:14px!important;
+  background:#0a0908!important;color:var(--tpp-text)!important;
+  display:flex!important;align-items:center!important;justify-content:space-between!important;text-align:left!important;
+}
+.phase6-document-trigger strong{color:var(--tpp-accent-2)!important}.phase6-document-trigger small{color:var(--tpp-text-3)!important}
+.phase6-document-menu{position:relative!important;z-index:12!important;display:grid!important;gap:6px!important;padding:8px!important;border:1px solid var(--tpp-line-strong)!important;border-radius:14px!important;background:#080706!important;box-shadow:0 18px 45px rgba(0,0,0,.48)!important}
+.phase6-document-choice{position:relative!important;z-index:13!important;pointer-events:auto!important;width:100%!important;text-align:left!important;padding:11px 12px!important;border:1px solid transparent!important;border-radius:11px!important;background:transparent!important;color:var(--tpp-text)!important}
+.phase6-document-choice span{color:var(--tpp-text-3)!important}.phase6-document-choice:hover{background:rgba(255,255,255,.045)!important;border-color:var(--tpp-line)!important}.phase6-document-choice.selected{background:rgba(228,205,168,.09)!important;border-color:rgba(228,205,168,.34)!important;color:var(--tpp-accent-2)!important}
+.phase6-form input[type="hidden"]{display:none!important}
+.phase6-metrics>div,.phase6-vote-totals>span,.phase6-vote-progress,.phase6-ballot-state{
+  background:rgba(255,255,255,.035)!important;border:1px solid var(--tpp-line)!important;color:var(--tpp-text)!important;
+}
+.phase6-empty{background:rgba(255,255,255,.025)!important;border:1px dashed var(--tpp-line)!important;color:var(--tpp-text-3)!important}
+.phase6-agenda-head span,.phase6-motion-head span,.phase6-vote-head span,.phase6-vote-meta,.phase6-motion-by{color:var(--tpp-text-3)!important}
+.phase6-agenda-head em,.phase6-motion-head em,.phase6-vote-head em{background:rgba(228,205,168,.08)!important;color:var(--tpp-accent-2)!important;border:1px solid rgba(228,205,168,.18)!important}
+.phase6-document-link{color:var(--tpp-accent-2)!important;background:rgba(228,205,168,.07)!important;border:1px solid rgba(228,205,168,.18)!important}
+.phase6-ballot-buttons button{border:1px solid var(--tpp-line-strong)!important;background:#0a0908!important;color:var(--tpp-text)!important}.phase6-ballot-buttons button:hover{background:rgba(228,205,168,.09)!important;color:var(--tpp-accent-2)!important}
+
+/* ===== Phase 7 ===== */
+.phase7-minutes-host{border-top-color:var(--tpp-line)!important}
+.phase7-minutes-form small,.phase7-minutes-readonly span,.phase7-record-metrics span,.phase7-record-card span,.phase7-record-card small,.phase7-minutes-snapshot span,.phase7-entry span,.phase7-empty{color:var(--tpp-text-3)!important}
+.phase7-record-card{color:var(--tpp-text)!important;box-shadow:none!important}.phase7-record-card:hover{border-color:var(--tpp-line-strong)!important;background:rgba(255,255,255,.055)!important}.phase7-record-card.selected{outline:2px solid rgba(228,205,168,.48)!important;background:rgba(228,205,168,.07)!important}
+.phase7-minutes-snapshot{background:rgba(255,255,255,.028)!important;border:1px solid var(--tpp-line)!important}
+.phase7-warning{background:rgba(180,35,24,.12)!important;color:#ffd2d2!important;border:1px solid rgba(255,156,156,.22)!important}
+
+/* ===== Phase 8 ===== */
+.phase8-tabs button{border:1px solid var(--tpp-line)!important;background:rgba(255,255,255,.025)!important;color:var(--tpp-text-2)!important}.phase8-tabs button.active{background:rgba(228,205,168,.12)!important;border-color:var(--tpp-line-strong)!important;color:var(--tpp-accent-2)!important}
+.phase8-card{box-shadow:none!important}.phase8-card-head span,.phase8-card p,.phase8-meta,.phase8-subhead span,.phase8-empty{color:var(--tpp-text-3)!important}.phase8-card-head em{background:rgba(228,205,168,.08)!important;color:var(--tpp-accent-2)!important}.phase8-inline a{background:rgba(228,205,168,.08)!important;color:var(--tpp-accent-2)!important;border:1px solid rgba(228,205,168,.16)!important}
+.phase8-form fieldset{border-color:var(--tpp-line)!important}.phase8-empty{border-color:var(--tpp-line)!important;background:rgba(255,255,255,.02)!important}
+.due-overdue,.task-urgent{color:#ffadad!important}.due-due_today,.due-due_soon,.task-high{color:#ffd08a!important}.due-completed{color:#bff4c8!important}
+
+/* ===== Phase 9 ===== */
+.phase9-tabs{padding:5px!important}.phase9-tabs button{background:transparent!important;color:var(--tpp-text-2)!important}.phase9-tabs button.active{background:rgba(228,205,168,.12)!important;color:var(--tpp-accent-2)!important}
+.phase9-banner.good,.phase9-ok{background:rgba(61,145,81,.13)!important;border-color:rgba(159,229,173,.22)!important;color:#c7f8d0!important}.phase9-banner.info,.phase9-audit-note{background:rgba(81,117,171,.12)!important;border-color:rgba(146,184,241,.22)!important;color:#d7e7ff!important}.phase9-banner.danger{background:rgba(180,35,24,.12)!important;border-color:rgba(255,156,156,.24)!important;color:#ffd1d1!important}.phase9-warning{background:rgba(190,111,24,.12)!important;color:#ffdcaa!important}.phase9-mini-list>div{background:rgba(255,255,255,.025)!important;border:1px solid rgba(255,255,255,.05)!important}.phase9-mini-list span,.phase9-metrics span,.phase9-metrics small,.phase9-audit-row span,.phase9-audit-row small,.phase9-access-table td:first-child small,.phase9-access-table td:last-child em{color:var(--tpp-text-3)!important}
+.phase9-audit-source{background:rgba(255,255,255,.06)!important;color:var(--tpp-text-2)!important}.phase9-correlation.context{background:rgba(190,111,24,.14)!important;color:#ffd89c!important}.phase9-correlation.verified{background:rgba(61,145,81,.14)!important;color:#c7f8d0!important}
+
+/* ===== Phase 10 / diagnostics ===== */
+.runtime-banner,.phase10-banner{border:1px solid var(--tpp-line)!important;background:#100e0c!important;color:var(--tpp-text)!important}.runtime-banner[data-level="danger"],.phase10-banner.danger{border-color:rgba(255,156,156,.30)!important;background:#1a0b0b!important;color:#ffd1d1!important}
+
+/* ===== Status colors ===== */
+.status-pill,.permission-chip,.badge,.tag,.count-badge,.protected-badge{background:rgba(228,205,168,.08)!important;border:1px solid rgba(228,205,168,.18)!important;color:var(--tpp-accent-2)!important}
+
+/* ===== Responsive ===== */
+@media(max-width:900px){
+  .portal-view{grid-template-columns:1fr!important}.sidebar{position:relative!important;top:auto!important;min-height:auto!important;border-right:0!important;border-bottom:1px solid var(--tpp-line)!important}.sidebar nav{display:flex!important;overflow-x:auto!important;padding-bottom:5px!important}.nav-item{white-space:nowrap!important}.portal-main{padding:22px 16px!important}.phase6-type-picker{grid-template-columns:repeat(2,minmax(0,1fr))!important}.phase8-layout,.phase7-record-layout,.phase9-incident-layout{grid-template-columns:1fr!important}}
+@media(max-width:560px){
+  .site-header{padding-inline:14px!important}.environment-badge{display:none!important}.phase6-form-head,.phase7-minutes-head,.phase8-card-head,.phase8-form-head,.phase9-head{flex-direction:column!important}.phase6-type-picker{grid-template-columns:1fr 1fr!important}.phase8-metrics,.phase9-metrics,.phase7-record-metrics{grid-template-columns:1fr!important}}
