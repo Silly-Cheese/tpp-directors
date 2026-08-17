@@ -23,9 +23,6 @@ setPersistence(provisioningAuth, inMemoryPersistence).catch((error) => {
   console.error("Unable to configure provisioning authentication persistence", error);
 });
 
-// GitHub Pages remains build-free. Production modules are loaded sequentially so
-// dependencies keep their expected order, while a failure is recorded instead of
-// silently preventing every later diagnostic/recovery module from loading.
 if (typeof window !== "undefined") {
   window.__TPP_MODULE_STATUS__ ||= {};
   const modules = [
@@ -48,9 +45,8 @@ if (typeof window !== "undefined") {
     "./phase9.js",
     "./phase9-finalize.js",
     "./phase10.js",
-    "./portal-final-ui.js",
     "./account-lifecycle.js",
-    "./portal-contrast-v2.js"
+    "./portal-theme-v3.js"
   ];
 
   const updateModuleStatus = (path, status, error = null) => {
