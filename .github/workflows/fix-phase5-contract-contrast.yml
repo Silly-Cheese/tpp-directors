@@ -1,0 +1,41 @@
+name: Fix Phase 5 Contract and Contrast
+
+on:
+  push:
+    paths:
+      - .github/workflows/fix-phase5-contract-contrast.yml
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Apply repair and verify
+        run: |
+          python .github/scripts/fix_phase5_contract_contrast.py
+          node --check js/meeting-data.js
+          node --check js/phase5.js
+          node --check js/boot-stable.js
+          grep -q 'scheduledFor: data.get("scheduledStart")' js/phase5.js
+          grep -q 'currentProfile, directory' js/phase5.js
+          grep -q 'normalizeAttendanceRecord' js/phase5.js
+          grep -q 'normalizeMeetingRecord' js/phase5.js
+          grep -q 'input.scheduledFor ?? input.scheduledStart' js/meeting-data.js
+          grep -q 'Stable5: eliminate all surviving light-theme islands' portal-theme-v3.css
+          grep -q '20260817-stable5' index.html
+          grep -q '20260817-stable5' js/boot-stable.js
+      - name: Commit repair
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add js/meeting-data.js js/phase5.js portal-theme-v3.css index.html js/boot-stable.js
+          git commit -m "Fix meeting creation contract and portal contrast"
+          git push origin HEAD:main
