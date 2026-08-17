@@ -532,11 +532,13 @@ function showSignedIn(profile) {
 }
 
 function hideAllViews() {
-  Object.values(views).forEach((view) => { if (view) view.hidden = true; });
+  // Dynamic Phase 5-10 sections are created after app.js starts, so the router
+  // must hide every portal section rather than only the original static map.
+  document.querySelectorAll(".portal-section").forEach((section) => { section.hidden = true; });
 }
 
 function switchPortalView(view) {
-  navItems.forEach((item) => item.classList.toggle("active", item.dataset.view === view));
+  document.querySelectorAll(".nav-item[data-view]").forEach((item) => item.classList.toggle("active", item.dataset.view === view));
   hideAllViews();
 
   if (view === "overview") {
@@ -565,11 +567,28 @@ function switchPortalView(view) {
     return;
   }
 
+  const dynamicView = document.getElementById(`view-${view}`);
+  if (dynamicView && dynamicView !== views.placeholder) {
+    dynamicView.hidden = false;
+    const titles = {
+      meetings: "Meetings",
+      resolutions: "Resolution Registry",
+      records: "Board Records",
+      governance: "Governance",
+      security: "Security & Audit",
+      launch: "Launch Readiness"
+    };
+    viewTitle.textContent = titles[view] || "Board Governance";
+    window.dispatchEvent(new CustomEvent("tpp:view-changed", { detail: { view } }));
+    return;
+  }
+
+  // Genuine fallback only when a requested module failed to create its view.
   views.placeholder.hidden = false;
-  const [title, copy] = moduleCopy[view] || ["Board Module", "This module is not available yet."];
+  const [title] = moduleCopy[view] || ["Board Module"];
   viewTitle.textContent = title;
-  placeholderTitle.textContent = title;
-  placeholderCopy.textContent = copy;
+  placeholderTitle.textContent = `${title} unavailable`;
+  placeholderCopy.textContent = "This module did not finish loading. Refresh the portal or check the browser console for the module error.";
 }
 
 async function refreshBoardWorkspace() {
