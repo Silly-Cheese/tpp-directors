@@ -87,7 +87,7 @@ function installStylesheet() {
   if ($('link[data-phase6-styles]')) return;
   const link = document.createElement("link");
   link.rel = "stylesheet";
-  link.href = "./phase6.css";
+  link.href = "./phase6.css?v=20260817-stable1";
   link.dataset.phase6Styles = "true";
   document.head.append(link);
 }
@@ -153,25 +153,24 @@ function resolutionForVote(voteId) {
 function renderAgendaForm() {
   if (!agendaFormOpen || !hasPermission(currentProfile, PERMISSIONS.AGENDA_MANAGE)) return "";
   const availableDocuments = agendaDocuments.filter((entry) => !entry.agendaMeetingId || entry.agendaMeetingId === meetingId);
-  const selectedDocument = availableDocuments.find((entry) => entry.id === agendaDraft.documentId) || null;
-  const typeChoice = (value, label) => `<button type="button" class="phase6-type-choice${agendaDraft.itemType === value ? " selected" : ""}" data-phase6-type-choice="${value}" aria-pressed="${agendaDraft.itemType === value ? "true" : "false"}">${label}</button>`;
-  const documentChoices = [
-    `<button type="button" class="phase6-document-choice${agendaDraft.documentId ? "" : " selected"}" data-phase6-document-choice=""><strong>None</strong><span>No Board document attached</span></button>`,
-    ...availableDocuments.map((entry) => `<button type="button" class="phase6-document-choice${agendaDraft.documentId === entry.id ? " selected" : ""}" data-phase6-document-choice="${escapeHtml(entry.id)}"><strong>${escapeHtml(entry.documentNumber || "BDOC")} · ${escapeHtml(entry.title)}</strong><span>Agenda Ready Board document</span></button>`)
+  const typeOptions = [
+    ["business", "Business"],
+    ["report", "Report"],
+    ["motion", "Motion"],
+    ["resolution", "Resolution"],
+    ["election", "Election"],
+    ["other", "Other"]
+  ].map(([value, label]) => `<option value="${value}" ${agendaDraft.itemType === value ? "selected" : ""}>${label}</option>`).join("");
+  const documentOptions = [
+    `<option value="" ${agendaDraft.documentId ? "" : "selected"}>None</option>`,
+    ...availableDocuments.map((entry) => `<option value="${escapeHtml(entry.id)}" ${agendaDraft.documentId === entry.id ? "selected" : ""}>${escapeHtml(entry.documentNumber || "BDOC")} · ${escapeHtml(entry.title)}</option>`)
   ].join("");
   return `
     <form id="phase6-agenda-form" class="phase6-form">
       <div class="phase6-form-head"><div><strong>Add agenda item</strong><span>Add an item directly or connect an Agenda Ready Board document.</span></div><button type="button" class="secondary-button" data-phase6-action="close-agenda-form">Close</button></div>
-      <fieldset class="phase6-type-fieldset"><legend>Agenda item type</legend><div class="phase6-type-picker">${typeChoice("business","Business")}${typeChoice("report","Report")}${typeChoice("motion","Motion")}${typeChoice("resolution","Resolution")}${typeChoice("election","Election")}${typeChoice("other","Other")}</div></fieldset>
-      <input type="hidden" name="itemType" value="${escapeHtml(agendaDraft.itemType)}">
-      <input type="hidden" name="documentId" value="${escapeHtml(agendaDraft.documentId)}">
-      <div class="phase6-document-picker">
-        <span class="phase6-field-label">Agenda Ready document</span>
-        <button type="button" class="phase6-document-trigger" data-phase6-action="toggle-document-picker" aria-expanded="${agendaDocumentPickerOpen ? "true" : "false"}">
-          <span><strong>${selectedDocument ? escapeHtml(selectedDocument.documentNumber || "BDOC") : "None"}</strong><small>${selectedDocument ? escapeHtml(selectedDocument.title) : "No Board document attached"}</small></span>
-          <span class="phase6-picker-chevron" aria-hidden="true">${agendaDocumentPickerOpen ? "▲" : "▼"}</span>
-        </button>
-        ${agendaDocumentPickerOpen ? `<div class="phase6-document-menu" role="listbox">${documentChoices}</div>` : ""}
+      <div class="phase6-form-row">
+        <label>Type<select name="itemType">${typeOptions}</select></label>
+        <label>Agenda Ready document<select name="documentId">${documentOptions}</select></label>
       </div>
       <label>Title<input name="title" maxlength="180" value="${escapeHtml(agendaDraft.title)}" required></label>
       <label>Description<textarea name="description" rows="3" maxlength="1200">${escapeHtml(agendaDraft.description)}</textarea></label>
@@ -672,6 +671,8 @@ async function applyAuthUser(user) {
   const resolutionNav = $('.nav-item[data-view="resolutions"]');
   if (resolutionNav) resolutionNav.hidden = !hasPermission(profile, PERMISSIONS.RESOLUTIONS_VIEW);
   bindResolutions();
+  const selected = window.__TPP_SELECTED_MEETING_ID__ || $("#phase6-meeting-workspace")?.dataset.meetingId || null;
+  if (selected) bindMeeting(selected);
 }
 
 function init() {

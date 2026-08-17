@@ -77,13 +77,13 @@ function installStylesheet() {
 }
 
 function ensureMeetingView() {
-  if ($("#view-meetings")) return;
   const portalMain = $(".portal-main");
   if (!portalMain) return;
-  const section = document.createElement("section");
+  const section = $("#view-meetings") || document.createElement("section");
+  const wasConnected = section.isConnected;
   section.id = "view-meetings";
   section.className = "portal-section";
-  section.hidden = true;
+  if (!wasConnected) section.hidden = true;
   section.innerHTML = `
     <div class="section-heading-row">
       <div>
@@ -258,7 +258,10 @@ function renderMeetingDetail() {
     ${controls.length ? `<div class="meeting-actions">${controls.join("")}</div>` : ""}
     <div class="panel-heading"><div><p class="eyebrow">LIVE ATTENDANCE</p><h2>Director roster</h2></div><span class="count-badge">${selectedAttendance.length}</span></div>
     <div class="attendance-table-wrap"><table class="attendance-table"><thead><tr><th>Director</th><th>Board role</th><th>Voting</th><th>Attendance</th></tr></thead><tbody>${selectedAttendance.map((entry) => attendanceRow(meeting, entry)).join("") || '<tr><td colspan="4">No attendance records are available.</td></tr>'}</tbody></table></div>
-    <p id="phase5-action-message" class="meeting-form-message" role="status"></p>`;
+    <p id="phase5-action-message" class="meeting-form-message" role="status"></p>
+    <section id="phase6-meeting-workspace" class="phase6-host" data-meeting-id="${meeting.id}"><div class="phase6-empty">Loading agenda, motions, and voting…</div></section>`;
+  window.__TPP_SELECTED_MEETING_ID__ = meeting.id;
+  queueMicrotask(() => window.dispatchEvent(new CustomEvent("tpp:meeting-selected", { detail: { meetingId: meeting.id } })));
 }
 
 function subscribeAttendance(meetingId) {
