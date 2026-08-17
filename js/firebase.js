@@ -30,8 +30,6 @@ if (typeof window !== "undefined") {
     "./founder-first-run-redirect.js",
     "./runtime-hardening.js",
     "./portal-navigation-sync.js",
-    "./phase5.js?v=20260817-stable1",
-    "./phase6.js?v=20260817-stable1",
     "./phase6-closing-recovery.js",
     "./phase6-guard.js",
     "./phase6-alert.js",

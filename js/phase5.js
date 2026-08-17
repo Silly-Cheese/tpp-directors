@@ -386,6 +386,11 @@ async function initialize(profile) {
   subscribeMeetings();
 }
 
+// Mount the real Meeting Room immediately so the static placeholder is never left visible
+// while authentication/profile state is resolving.
+installStylesheet();
+ensureMeetingView();
+
 onAuthStateChanged(auth, async (user) => {
   if (!user) return;
   const snapshot = await getDoc(doc(db, "directors", user.uid));
