@@ -48,7 +48,7 @@
             <label for="confirm-pin">Confirm PIN</label><input id="confirm-pin" name="confirmPin" inputmode="numeric" autocomplete="new-password" pattern="[0-9]{4}" maxlength="4" placeholder="••••" required>
             <button id="save-pin-button" type="submit">Activate Board Account</button><p id="pin-setup-message" class="form-message" role="status"></p>
           </form>
-          <div class="security-note"><strong>Authorized Board access only.</strong><span>Portal actions may be recorded. PINs and activation codes are never stored in Cloud Firestore.</span></div>
+          <div class="security-note"><strong>Authorized Board access only.</strong><span>Portal actions may be recorded. PINs are never stored in Cloud Firestore. Temporary activation codes are retained only in the Founder-protected recovery vault so an account can be activated without creating duplicates.</span></div>
         </div>
       </section>
 
