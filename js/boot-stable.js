@@ -1,6 +1,6 @@
 // Deterministic Board Portal bootstrap.
 // Critical live-governance modules mount first; the main app/router comes last.
-const RELEASE = "20260817-stable6";
+const RELEASE = "20260817-stable7";
 
 async function boot() {
   try {

@@ -278,11 +278,11 @@ function renderMeetingDetail() {
       <div><dt>Quorum requirement</dt><dd>${meeting.quorumRequired} voting-eligible director${Number(meeting.quorumRequired) === 1 ? "" : "s"}</dd></div>
       <div><dt>Created by</dt><dd>${meeting.createdByName || "Director"}</dd></div>
     </dl>
+    <p id="phase5-action-message" class="meeting-form-message phase5-action-message" role="status"></p>
     ${invited ? `<div class="meeting-self-checkin"><div><strong>${ownAttendance?.status === "present" ? "You are checked in." : locked ? "This meeting is closed." : meeting.status === "scheduled" ? "Check-in is closed." : "Your roster status is " + humanize(ownAttendance?.status || "invited") + "."}</strong><span>${ownAttendance?.status === "present" ? "Your presence is included in the live quorum calculation." : "Your roster status is " + humanize(ownAttendance?.status || "invited") + "."}</span></div>${mayCheckIn ? '<button class="meeting-primary-button" data-meeting-action="self-checkin">Check In</button>' : ""}</div>` : ""}
     ${controls.length ? `<div class="meeting-actions">${controls.join("")}</div>` : ""}
     <div class="panel-heading"><div><p class="eyebrow">LIVE ATTENDANCE</p><h2>Director roster</h2></div><span class="count-badge">${selectedAttendance.length}</span></div>
     <div class="attendance-table-wrap"><table class="attendance-table"><thead><tr><th>Director</th><th>Board role</th><th>Voting</th><th>Attendance</th></tr></thead><tbody>${selectedAttendance.map((entry) => attendanceRow(meeting, entry)).join("") || '<tr><td colspan="4">No attendance records are available.</td></tr>'}</tbody></table></div>
-    <p id="phase5-action-message" class="meeting-form-message" role="status"></p>
     <section id="phase6-meeting-workspace" class="phase6-host" data-meeting-id="${meeting.id}"><div class="phase6-empty">Loading agenda, motions, and voting…</div></section>`;
   window.__TPP_SELECTED_MEETING_ID__ = meeting.id;
   queueMicrotask(() => window.dispatchEvent(new CustomEvent("tpp:meeting-selected", { detail: { meetingId: meeting.id } })));
@@ -321,11 +321,13 @@ function subscribeMeetings() {
   });
 }
 
-async function handleMeetingAction(action) {
+async function handleMeetingAction(action, sourceButton = null) {
   const meeting = selectedMeeting();
   if (!meeting) return;
   const message = $("#phase5-action-message");
-  setMessage(message, "");
+  setMessage(message, action === "self-checkin" ? "Recording your check-in…" : "Updating meeting…");
+  const originalText = sourceButton?.textContent || "";
+  if (sourceButton) { sourceButton.disabled = true; if (action === "self-checkin") sourceButton.textContent = "Checking in…"; }
   try {
     if (action === "activate") await openMeetingCheckIn(meeting.id, currentProfile);
     if (action === "call") await callMeetingToOrder(meeting.id, currentProfile);
@@ -334,9 +336,15 @@ async function handleMeetingAction(action) {
     if (action === "adjourn") await adjournMeeting(meeting.id, currentProfile);
     if (action === "cancel") await cancelMeeting(meeting.id, currentProfile);
     if (action === "self-checkin") await checkIntoMeeting(meeting.id, currentProfile);
+    setMessage(message, action === "self-checkin" ? "Check-in recorded." : "Meeting updated.");
   } catch (error) {
     console.error(error);
-    setMessage(message, error.message || "The meeting action could not be completed.");
+    const detail = error?.code === "permission-denied"
+      ? "Check-in was blocked by the currently deployed Firestore rules. Deploy the latest firestore.rules and try again."
+      : (error.message || "The meeting action could not be completed.");
+    setMessage(message, detail);
+  } finally {
+    if (sourceButton?.isConnected) { sourceButton.disabled = false; sourceButton.textContent = originalText; }
   }
 }
 
@@ -385,7 +393,7 @@ function bindEvents() {
   });
   $("#phase5-meeting-detail")?.addEventListener("click", (event) => {
     const button = event.target.closest("[data-meeting-action]");
-    if (button) handleMeetingAction(button.dataset.meetingAction);
+    if (button) handleMeetingAction(button.dataset.meetingAction, button);
   });
   $("#phase5-meeting-detail")?.addEventListener("change", (event) => {
     const select = event.target.closest("[data-attendance-uid]");
