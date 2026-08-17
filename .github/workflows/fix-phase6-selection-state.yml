@@ -1,0 +1,33 @@
+name: Fix Phase 6 selection state
+
+on:
+  push:
+    paths:
+      - .github/workflows/fix-phase6-selection-state.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Patch Phase 6 selection rerender state
+        run: |
+          python .github/scripts/fix_phase6_selection_state.py
+          node --check js/phase6.js
+          grep -q 'renderWorkspace({ captureDraft = true } = {})' js/phase6.js
+          grep -q 'renderWorkspace({ captureDraft: false })' js/phase6.js
+      - name: Commit corrected Phase 6 source
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add js/phase6.js
+          git commit -m "Fix Phase 6 selection state rerenders"
+          git push origin HEAD:main
