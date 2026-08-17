@@ -28,12 +28,12 @@ service cloud.firestore {
     function voteAfter(id) { return getAfter(vPath(id)).data; }
     function docBefore(id) { return get(/databases/$(database)/documents/documents/$(id)).data; }
     function docAfter(id) { return getAfter(/databases/$(database)/documents/documents/$(id)).data; }
+    function attendancePresence(data) {
+      return data.get('presenceStatus', data.get('status', 'invited'));
+    }
     function presentVoter(meetingId, uid) {
       return exists(aPath(meetingId, uid))
-        && (
-          (('presenceStatus' in get(aPath(meetingId, uid)).data) && get(aPath(meetingId, uid)).data.presenceStatus == 'present')
-          || (!('presenceStatus' in get(aPath(meetingId, uid)).data) && ('status' in get(aPath(meetingId, uid)).data) && get(aPath(meetingId, uid)).data.status == 'present')
-        )
+        && attendancePresence(get(aPath(meetingId, uid)).data) == 'present'
         && get(aPath(meetingId, uid)).data.votingEligible == true;
     }
     function googleUrl(value) {
@@ -366,7 +366,8 @@ service cloud.firestore {
     function selfCheckIn() {
       return active() && resource.data.directorUid == request.auth.uid
         && meeting(resource.data.meetingId).status in ['checkin_open','in_session','recessed']
-        && (((('presenceStatus' in resource.data) && resource.data.presenceStatus in ['invited','departed'])) || ((!('presenceStatus' in resource.data)) && ('status' in resource.data) && resource.data.status in ['invited','departed']))) && request.resource.data.presenceStatus == 'present'
+        && attendancePresence(resource.data) in ['invited','departed']
+        && request.resource.data.presenceStatus == 'present'
         && request.resource.data.updatedBy == request.auth.uid
         && request.resource.data.updatedAt == request.time && request.resource.data.lastPresenceChangeAt == request.time
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['presenceStatus','checkedInAt','returnedAt','lastPresenceChangeAt','updatedAt','updatedBy']);
