@@ -1,0 +1,147 @@
+/* The Prayer Project Board Portal — high-contrast reset v2.
+   Loaded last. This intentionally overrides every phase stylesheet. */
+:root{
+  --pc-bg:#050505;
+  --pc-panel:#11100f;
+  --pc-panel-2:#181512;
+  --pc-field:#090807;
+  --pc-field-focus:#15110d;
+  --pc-text:#fffdf8;
+  --pc-text-soft:#eee5da;
+  --pc-text-muted:#c8bcad;
+  --pc-accent:#f0d5aa;
+  --pc-accent-strong:#ffe9c7;
+  --pc-border:#6d5a41;
+  --pc-border-soft:#40362b;
+  --pc-danger:#ffb0b0;
+  --pc-success:#b9efc4;
+  --pc-warning:#ffdc9a;
+}
+
+html,body{background:var(--pc-bg)!important;color:var(--pc-text)!important;color-scheme:dark!important}
+body,.page-shell,.portal-view,.portal-main,.portal-section{color:var(--pc-text)!important}
+
+/* Make text readable by default. */
+.portal-main p,.portal-main span,.portal-main small,.portal-main label,.portal-main legend,.portal-main dt,.portal-main dd,
+.portal-main li,.portal-main td,.portal-main th,.portal-main em,.portal-main .field-help,.portal-main .panel-copy,
+.portal-main .long-copy,.portal-main .empty-state,.portal-main .meeting-form-message,.portal-main .form-message{
+  color:var(--pc-text-soft)!important;
+  opacity:1!important;
+}
+.portal-main small,.portal-main .muted,.portal-main .field-help,.portal-main [class*="meta"],.portal-main [class*="caption"]{color:var(--pc-text-muted)!important}
+.portal-main h1,.portal-main h2,.portal-main h3,.portal-main h4,.portal-main strong{color:var(--pc-text)!important}
+.portal-main .eyebrow,.portal-main [class*="eyebrow"]{color:var(--pc-accent-strong)!important}
+
+/* Kill legacy white/light surfaces across all modules. */
+.portal-main article,.portal-main .panel,.portal-main [class*="-card"],.portal-main [class*="-panel"],
+.portal-main [class*="-form"],.portal-main [class*="-box"],.portal-main [class*="-row"],
+.portal-main [class*="-item"],.portal-main [class*="metric"],.portal-main fieldset,
+.portal-main .policy-box,.portal-main .review-note-box,.portal-main .setup-banner{
+  background-color:var(--pc-panel)!important;
+  color:var(--pc-text)!important;
+  border-color:var(--pc-border-soft)!important;
+}
+.portal-main [class*="-card"],.portal-main [class*="-panel"],.portal-main [class*="-form"],
+.portal-main article.panel,.portal-main fieldset{
+  box-shadow:none!important;
+}
+
+/* Forms: maximum legibility. */
+.portal-main input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]),
+.portal-main textarea,.portal-main select,
+.login-card input,.login-card textarea,.login-card select,
+#founder-setup-card input,#founder-setup-card textarea,#founder-setup-card select{
+  background:var(--pc-field)!important;
+  color:var(--pc-text)!important;
+  -webkit-text-fill-color:var(--pc-text)!important;
+  border:2px solid var(--pc-border)!important;
+  border-radius:12px!important;
+  min-height:48px!important;
+  padding:11px 13px!important;
+  opacity:1!important;
+  box-shadow:none!important;
+  caret-color:var(--pc-accent-strong)!important;
+}
+.portal-main textarea{min-height:104px!important;line-height:1.5!important}
+.portal-main input::placeholder,.portal-main textarea::placeholder,.login-card input::placeholder{
+  color:#b5aa9d!important;-webkit-text-fill-color:#b5aa9d!important;opacity:1!important;
+}
+.portal-main input:focus,.portal-main textarea:focus,.portal-main select:focus,
+.login-card input:focus,.login-card textarea:focus,.login-card select:focus{
+  background:var(--pc-field-focus)!important;
+  border-color:var(--pc-accent-strong)!important;
+  outline:3px solid rgba(240,213,170,.22)!important;
+  outline-offset:1px!important;
+}
+.portal-main select,.login-card select{color-scheme:dark!important}
+.portal-main select option,.portal-main select optgroup,.login-card select option{
+  background:#0c0b0a!important;color:var(--pc-text)!important;
+}
+.portal-main input[type="checkbox"],.portal-main input[type="radio"]{accent-color:var(--pc-accent)!important;opacity:1!important}
+.portal-main label,.portal-main legend{font-weight:800!important;color:var(--pc-text)!important}
+
+/* Buttons. */
+.portal-main button,.portal-main .primary-button,.portal-main .secondary-button,.portal-main .table-action,.portal-main a.link-button{
+  opacity:1!important;
+}
+.portal-main .primary-button,.portal-main button[type="submit"],.portal-main .meeting-primary-button{
+  background:var(--pc-accent)!important;color:#140f09!important;border:2px solid var(--pc-accent)!important;font-weight:900!important;
+}
+.portal-main .secondary-button,.portal-main .table-action,.portal-main .meeting-secondary-button,
+.portal-main button:not([type="submit"]):not(.nav-item):not(.phase6-type-choice):not(.phase6-document-choice):not(.phase6-document-trigger):not(.meeting-danger-button){
+  background:#1c1814!important;color:var(--pc-text)!important;border:2px solid var(--pc-border)!important;
+}
+.portal-main button:hover,.portal-main a.link-button:hover{filter:brightness(1.12)!important}
+.portal-main button:focus-visible,.portal-main a:focus-visible{outline:3px solid var(--pc-accent-strong)!important;outline-offset:2px!important}
+.portal-main button:disabled{opacity:.55!important}
+
+/* Navigation. */
+.sidebar{background:#050505!important;border-color:#2a241d!important}
+.nav-item{color:var(--pc-text-soft)!important;background:transparent!important}
+.nav-item.active{background:#1d1915!important;color:var(--pc-accent-strong)!important;border-color:var(--pc-border)!important}
+.nav-item:hover{background:#15120f!important;color:var(--pc-text)!important}
+
+/* Tables. */
+.portal-main table{background:#0b0a09!important;color:var(--pc-text)!important;border-color:var(--pc-border-soft)!important}
+.portal-main thead,.portal-main th{background:#181512!important;color:var(--pc-text)!important;border-color:var(--pc-border-soft)!important}
+.portal-main td{background:#0d0c0b!important;color:var(--pc-text-soft)!important;border-color:#2e2821!important}
+.portal-main tr:nth-child(even) td{background:#11100f!important}
+
+/* Phase 6 deterministic controls. */
+.phase6-type-picker{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:9px!important}
+.phase6-type-choice{
+  background:#0a0908!important;color:var(--pc-text)!important;border:2px solid var(--pc-border)!important;
+  min-height:46px!important;pointer-events:auto!important;position:relative!important;z-index:5!important;font-weight:850!important;
+}
+.phase6-type-choice.selected,.phase6-type-choice[aria-pressed="true"]{
+  background:var(--pc-accent)!important;color:#140f09!important;border-color:var(--pc-accent-strong)!important;
+  box-shadow:0 0 0 3px rgba(240,213,170,.18)!important;
+}
+.phase6-document-trigger{
+  width:100%!important;background:#0a0908!important;color:var(--pc-text)!important;border:2px solid var(--pc-border)!important;
+  pointer-events:auto!important;position:relative!important;z-index:8!important;min-height:58px!important;
+}
+.phase6-document-trigger small{color:var(--pc-text-muted)!important}
+.phase6-document-menu{background:#080706!important;border:2px solid var(--pc-border)!important;position:relative!important;z-index:15!important}
+.phase6-document-choice{background:#0d0b09!important;color:var(--pc-text)!important;border:1px solid #332b22!important;pointer-events:auto!important;position:relative!important;z-index:16!important}
+.phase6-document-choice:hover,.phase6-document-choice.selected{background:#241e17!important;border-color:var(--pc-accent)!important;color:var(--pc-accent-strong)!important}
+.phase6-action-metrics>div,.phase6-vote-totals>span,.phase6-vote-progress,.phase6-ballot-state,.phase6-empty{
+  background:#11100f!important;color:var(--pc-text)!important;border-color:var(--pc-border-soft)!important;
+}
+
+/* Status colors keep high contrast. */
+.phase6-good,.due-completed,.phase9-ok{color:var(--pc-success)!important}
+.phase6-bad,.due-overdue,.phase9-warning,.phase9-banner.danger{color:var(--pc-danger)!important}
+.due-due_today,.due-due_soon{color:var(--pc-warning)!important}
+
+/* Founder activation recovery. */
+#activation-vault-panel{margin-top:18px!important;padding:18px!important;border:2px solid var(--pc-border)!important;border-radius:16px!important;background:#100e0c!important}
+#activation-vault-panel .activation-code-display{display:flex!important;gap:10px!important;align-items:center!important;flex-wrap:wrap!important;margin:10px 0!important}
+#activation-vault-panel code{font-size:1.08rem!important;letter-spacing:.08em!important;color:var(--pc-accent-strong)!important;background:#050505!important;border:1px solid var(--pc-border)!important;border-radius:10px!important;padding:10px 12px!important}
+#activation-vault-panel .danger-zone{margin-top:16px!important;padding-top:16px!important;border-top:1px solid var(--pc-border-soft)!important}
+#activation-vault-panel .duplicate-retire-button{background:#321616!important;color:#ffd8d8!important;border:2px solid #8f4747!important}
+
+@media(max-width:760px){
+  .phase6-type-picker{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  .portal-main input,.portal-main textarea,.portal-main select{font-size:16px!important}
+}
