@@ -48,7 +48,9 @@ if (typeof window !== "undefined") {
     "./phase9.js",
     "./phase9-finalize.js",
     "./phase10.js",
-    "./portal-final-ui.js"
+    "./portal-final-ui.js",
+    "./account-lifecycle.js",
+    "./portal-contrast-v2.js"
   ];
 
   const updateModuleStatus = (path, status, error = null) => {
