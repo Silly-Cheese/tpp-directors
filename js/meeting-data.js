@@ -134,7 +134,7 @@ export async function createBoardMeeting(input, profile, directoryEntries = []) 
     : doc(collection(db, "meetings"));
   const actorUid = auth.currentUser.uid;
   const meeting = {
-    meetingNumber: meetingNumberFromId(meetingRef.id),
+    meetingNumber: meetingNumberFromId(creationKey || meetingRef.id),
     creationKey: creationKey || null,
     title,
     meetingType,
