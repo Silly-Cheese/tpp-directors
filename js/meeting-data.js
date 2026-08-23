@@ -127,10 +127,15 @@ export async function createBoardMeeting(input, profile, directoryEntries = []) 
     throw new Error("Quorum must be at least 1 and cannot exceed the number of invited voting-eligible directors.");
   }
 
-  const meetingRef = doc(collection(db, "meetings"));
+  const rawCreationKey = String(input.creationKey || "").trim();
+  const creationKey = /^[A-Za-z0-9_-]{12,96}$/.test(rawCreationKey) ? rawCreationKey : null;
+  const meetingRef = creationKey
+    ? doc(db, "meetings", `create_${creationKey}`)
+    : doc(collection(db, "meetings"));
   const actorUid = auth.currentUser.uid;
   const meeting = {
     meetingNumber: meetingNumberFromId(meetingRef.id),
+    creationKey: creationKey || null,
     title,
     meetingType,
     scheduledFor,

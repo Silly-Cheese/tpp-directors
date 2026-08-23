@@ -21,7 +21,7 @@ import {
   recessMeeting,
   resumeMeeting,
   updateMeetingAttendance
-} from "./meeting-data.js?v=20260817-stable6";
+} from "./meeting-data.js?v=20260822-stable8";
 import { hasPermission, PERMISSIONS } from "./permissions.js";
 
 let currentProfile = null;
@@ -351,12 +351,24 @@ async function handleMeetingAction(action, sourceButton = null) {
 async function handleCreateMeeting(event) {
   event.preventDefault();
   const form = event.currentTarget;
+  // DOM-level lock is shared even if this module is accidentally evaluated twice.
+  if (form.dataset.submitting === "true") return;
+  form.dataset.submitting = "true";
+  const submitButton = form.querySelector('button[type="submit"]');
+  const originalButtonText = submitButton?.textContent || "Create Board Meeting";
+  if (submitButton) {
+    submitButton.disabled = true;
+    submitButton.textContent = "Creating…";
+  }
   const message = $("#phase5-create-message");
   const data = new FormData(form);
   const invitedDirectorUids = data.getAll("invitedDirector");
+  const creationKey = form.dataset.creationKey || (globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random()}`).replaceAll("-", "");
+  form.dataset.creationKey = creationKey;
   setMessage(message, "Creating meeting…");
   try {
     const created = await createBoardMeeting({
+      creationKey,
       title: data.get("title"),
       meetingType: data.get("type"),
       scheduledFor: data.get("scheduledStart"),
@@ -367,6 +379,7 @@ async function handleCreateMeeting(event) {
       invitedDirectorUids
     }, currentProfile, directory);
     form.reset();
+    delete form.dataset.creationKey;
     renderInviteGrid();
     $("#phase5-create-panel").hidden = true;
     selectedMeetingId = created.id;
@@ -374,6 +387,12 @@ async function handleCreateMeeting(event) {
   } catch (error) {
     console.error(error);
     setMessage(message, error.message || "The meeting could not be created.");
+  } finally {
+    delete form.dataset.submitting;
+    if (submitButton?.isConnected) {
+      submitButton.disabled = false;
+      submitButton.textContent = originalButtonText;
+    }
   }
 }
 

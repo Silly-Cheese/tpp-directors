@@ -9,7 +9,7 @@ import {
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js";
 import { auth, db } from "./firebase.js";
 import { listBoardDocuments } from "./document-data.js";
-import { calculateQuorum } from "./meeting-data.js?v=20260817-stable6";
+import { calculateQuorum } from "./meeting-data.js?v=20260822-stable8";
 import {
   castVote,
   closeVote,
@@ -19,7 +19,7 @@ import {
   setAgendaItemStatus,
   statusLabel,
   thresholdLabel
-} from "./governance-data.js?v=20260817-stable6";
+} from "./governance-data.js?v=20260822-stable8";
 import { hasPermission, PERMISSIONS } from "./permissions.js";
 
 const $ = (selector) => document.querySelector(selector);

@@ -434,13 +434,6 @@ service cloud.firestore {
         && request.resource.data.secondedByUid == null && request.resource.data.voteId == null && request.resource.data.resolutionId == null
         && request.resource.data.createdAt == request.time && request.resource.data.updatedAt == request.time;
     }
-    function secondMotion() {
-      return cap('motions.second') && resource.data.status == 'pending_second' && resource.data.movedByUid != request.auth.uid
-        && meeting(resource.data.meetingId).status == 'in_session' && presentVoter(resource.data.meetingId, request.auth.uid)
-        && request.resource.data.status == 'ready' && request.resource.data.secondedByUid == request.auth.uid
-        && request.resource.data.secondedAt == request.time && request.resource.data.updatedAt == request.time && request.resource.data.updatedBy == request.auth.uid
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','secondedByUid','secondedByName','secondedAt','updatedAt','updatedBy']);
-    }
     function startVote(id) {
       return cap('votes.push') && resource.data.status in ['ready','pending_second'] && meeting(resource.data.meetingId).status == 'in_session'
         && request.resource.data.status == 'voting' && request.resource.data.voteId is string
@@ -459,7 +452,7 @@ service cloud.firestore {
     match /motions/{id} {
       allow get, list: if cap('meetings.view');
       allow create: if motionCreate();
-      allow update: if secondMotion() || startVote(id) || finishVote(id);
+      allow update: if startVote(id) || finishVote(id);
       allow delete: if false;
     }
 
