@@ -346,10 +346,34 @@ service cloud.firestore {
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['recordStatus','recordId','minutesId','certifiedAt','certifiedBy','certifiedByName','updatedAt','updatedBy']);
     }
 
+
+    // Recoverable meeting deletion; immutable certified records remain protected.
+    function meetingTrash() {
+      let old = resource.data;
+      let next = request.resource.data;
+      return founder()
+        && old.recordStatus == 'uncertified' && old.activeVoteId == null
+        && next.updatedAt == request.time && next.updatedBy == request.auth.uid
+        && next.diff(old).affectedKeys().hasOnly(['status','deleted','deletedPreviousStatus','deletedAt','deletedBy','updatedAt','updatedBy'])
+        && (
+          (old.get('deleted', false) == false
+            && old.status in ['scheduled','cancelled','adjourned']
+            && next.deleted == true && next.status == 'cancelled'
+            && next.deletedPreviousStatus == old.status
+            && next.deletedAt == request.time && next.deletedBy == request.auth.uid)
+          || (old.get('deleted', false) == true && old.status == 'cancelled'
+            && next.deleted == false
+            && old.deletedPreviousStatus in ['scheduled','cancelled','adjourned']
+            && next.status == old.deletedPreviousStatus
+            && next.deletedPreviousStatus == old.deletedPreviousStatus
+            && next.deletedAt == null && next.deletedBy == null)
+        );
+    }
+
     match /meetings/{id} {
       allow get, list: if cap('meetings.view');
       allow create: if meetingCreate();
-      allow update: if activateMeeting() || controlMeeting() || acquireVoteLock(id) || releaseVoteLock() || certifyMeeting(id);
+      allow update: if activateMeeting() || controlMeeting() || acquireVoteLock(id) || releaseVoteLock() || certifyMeeting(id) || meetingTrash();
       allow delete: if false;
     }
 
