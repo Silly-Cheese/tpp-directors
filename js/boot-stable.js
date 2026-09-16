@@ -20,4 +20,38 @@ async function boot() {
   }
 }
 
+
+function initializeWorkspaceNavigation() {
+  const sidebar = document.querySelector(".sidebar");
+  const toggle = document.getElementById("board-menu-toggle");
+  if (!sidebar || !toggle) return;
+  sidebar.dataset.menuReady = "true";
+  function closeMenu() {
+    sidebar.dataset.menuOpen = "false";
+    toggle.setAttribute("aria-expanded", "false");
+  }
+  toggle.addEventListener("click", () => {
+    const open = toggle.getAttribute("aria-expanded") !== "true";
+    sidebar.dataset.menuOpen = String(open);
+    toggle.setAttribute("aria-expanded", String(open));
+  });
+  sidebar.addEventListener("keydown", event => {
+    if (event.key === "Escape") { closeMenu(); toggle.focus(); }
+  });
+  window.addEventListener("tpp:view-changed", () => {
+    closeMenu();
+    if (window.matchMedia("(max-width:760px)").matches) {
+      const heading = document.getElementById("view-title");
+      if (heading) {
+        heading.tabIndex = -1;
+        heading.focus({ preventScroll: true });
+        heading.scrollIntoView({ block: "start", behavior: "auto" });
+      }
+    }
+  });
+  const view = document.getElementById("signed-in-view");
+  if (view) new MutationObserver(() => { if (view.hidden) closeMenu(); }).observe(view, { attributes: true, attributeFilter: ["hidden"] });
+}
+initializeWorkspaceNavigation();
+
 boot();
