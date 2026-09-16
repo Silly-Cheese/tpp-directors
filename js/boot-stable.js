@@ -35,6 +35,16 @@ function initializeWorkspaceNavigation() {
     sidebar.dataset.menuOpen = String(open);
     toggle.setAttribute("aria-expanded", String(open));
   });
+  sidebar.addEventListener("click", event => {
+    if (!event.target.closest(".nav-item[data-view]")) return;
+    closeMenu();
+    if (window.matchMedia("(max-width:760px)").matches) {
+      requestAnimationFrame(() => {
+        const heading = document.getElementById("view-title");
+        if (heading) { heading.tabIndex = -1; heading.focus({ preventScroll: true }); heading.scrollIntoView({ block: "start" }); }
+      });
+    }
+  });
   sidebar.addEventListener("keydown", event => {
     if (event.key === "Escape") { closeMenu(); toggle.focus(); }
   });
