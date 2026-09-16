@@ -2,6 +2,8 @@ import {
   collection,
   doc,
   getDoc,
+  runTransaction,
+  serverTimestamp,
   onSnapshot,
   query,
   where
@@ -32,6 +34,7 @@ let selectedAttendance = [];
 let meetingsUnsubscribe = null;
 let attendanceUnsubscribe = null;
 let initialized = false;
+let meetingActionBusy = false;
 
 const $ = (selector) => document.querySelector(selector);
 
@@ -152,11 +155,12 @@ function ensureMeetingView() {
 
     <div class="meeting-toolbar">
       <div class="meeting-filters">
-        <label>Search<input id="phase5-search" type="search" placeholder="Meeting title or number"></label>
-        <label>Status<select id="phase5-status-filter"><option value="all">All meetings</option><option value="scheduled">Scheduled</option><option value="checkin_open">Check-in open</option><option value="in_session">In session</option><option value="recessed">Recessed</option><option value="adjourned">Adjourned</option><option value="cancelled">Cancelled</option></select></label>
+        <label>Search<input id="phase5-search" type="search" placeholder="Title, number, or location"></label>
+        <label>Status<select id="phase5-status-filter"><option value="all">All meetings</option><option value="upcoming">Upcoming &amp; live</option><option value="deleted">Trash</option><option value="scheduled">Scheduled</option><option value="checkin_open">Check-in open</option><option value="in_session">In session</option><option value="recessed">Recessed</option><option value="adjourned">Adjourned</option><option value="cancelled">Cancelled</option></select></label>
       </div>
     </div>
 
+    <p id="phase5-list-summary" class="meeting-form-message" role="status"></p>
     <div class="meeting-layout">
       <div id="phase5-meeting-list" class="meeting-list"><div class="phase5-empty">Loading Board meetings…</div></div>
       <article id="phase5-meeting-detail" class="panel meeting-detail"><div class="phase5-empty">Select a meeting to open the Meeting Room.</div></article>
@@ -202,10 +206,21 @@ function renderMeetingList() {
   const search = String($("#phase5-search")?.value || "").trim().toLowerCase();
   const status = $("#phase5-status-filter")?.value || "all";
   const filtered = meetings.filter((meeting) => {
-    if (status !== "all" && meeting.status !== status) return false;
+    if (status === "deleted") {
+      if (!isFounder(currentProfile) || !meeting.deleted) return false;
+    } else {
+      if (meeting.deleted) return false;
+      if (status === "upcoming" && !["scheduled", "checkin_open", "in_session", "recessed"].includes(meeting.status)) return false;
+      if (!["all", "upcoming"].includes(status) && meeting.status !== status) return false;
+    }
     if (!search) return true;
-    return [meeting.title, meeting.meetingNumber, meeting.type].some((value) => String(value || "").toLowerCase().includes(search));
+    return [meeting.title, meeting.meetingNumber, meeting.type, meeting.location].some((value) => String(value || "").toLowerCase().includes(search));
   });
+  filtered.sort((a, b) => {
+    const rank = m => ["checkin_open", "in_session", "recessed"].includes(m.status) ? 0 : m.status === "scheduled" ? 1 : 2;
+    return rank(a) - rank(b) || (rank(a) === 1 ? timestampValue(a.scheduledStart) - timestampValue(b.scheduledStart) : timestampValue(b.scheduledStart) - timestampValue(a.scheduledStart));
+  });
+  setMessage($("#phase5-list-summary"), filtered.length + (filtered.length === 1 ? " meeting" : " meetings") + (status === "deleted" ? " in Trash. Linked records are retained." : ""));
   if (!filtered.length) {
     list.innerHTML = '<div class="phase5-empty">No Board meetings match this view.</div>';
     return;
@@ -253,6 +268,9 @@ function renderMeetingDetail() {
   const locked = ["adjourned", "cancelled"].includes(meeting.status);
 
   const controls = [];
+  const canTrash = isFounder(currentProfile) && !meeting.deleted && ["scheduled", "cancelled", "adjourned"].includes(meeting.status) && meeting.recordStatus !== "certified" && !meeting.activeVoteId;
+  if (canTrash) controls.push('<button class="meeting-danger-button" data-meeting-action="trash">Delete meeting…</button>');
+  if (isFounder(currentProfile) && meeting.deleted) controls.push('<button class="meeting-secondary-button" data-meeting-action="restore">Restore meeting</button>');
   if (mayActivate && meeting.status === "scheduled") controls.push('<button class="meeting-primary-button" data-meeting-action="activate">Open Check-In</button>');
   if (mayControl && meeting.status === "checkin_open") controls.push('<button class="meeting-primary-button" data-meeting-action="call">Call to Order</button>');
   if (mayControl && meeting.status === "in_session") controls.push('<button class="meeting-secondary-button" data-meeting-action="recess">Call Recess</button>');
@@ -283,16 +301,17 @@ function renderMeetingDetail() {
     ${controls.length ? `<div class="meeting-actions">${controls.join("")}</div>` : ""}
     <div class="panel-heading"><div><p class="eyebrow">LIVE ATTENDANCE</p><h2>Director roster</h2></div><span class="count-badge">${selectedAttendance.length}</span></div>
     <div class="attendance-table-wrap"><table class="attendance-table"><thead><tr><th>Director</th><th>Board role</th><th>Voting</th><th>Attendance</th></tr></thead><tbody>${selectedAttendance.map((entry) => attendanceRow(meeting, entry)).join("") || '<tr><td colspan="4">No attendance records are available.</td></tr>'}</tbody></table></div>
-    <section id="phase6-meeting-workspace" class="phase6-host" data-meeting-id="${meeting.id}"><div class="phase6-empty">Loading agenda, motions, and voting…</div></section>`;
+    ${meeting.deleted ? '<p class="phase5-empty">This meeting is in Trash. Restore it to access its retained meeting workspace.</p>' : `<section id="phase6-meeting-workspace" class="phase6-host" data-meeting-id="${meeting.id}"><div class="phase6-empty">Loading agenda, motions, and voting…</div></section>`}`;
   window.__TPP_SELECTED_MEETING_ID__ = meeting.id;
   queueMicrotask(() => window.dispatchEvent(new CustomEvent("tpp:meeting-selected", { detail: { meetingId: meeting.id } })));
 }
 
 function subscribeAttendance(meetingId) {
   if (attendanceUnsubscribe) attendanceUnsubscribe();
+  attendanceUnsubscribe = null;
   selectedAttendance = [];
   renderMeetingDetail();
-  if (!meetingId) return;
+  if (!meetingId) { window.__TPP_SELECTED_MEETING_ID__ = null; window.dispatchEvent(new CustomEvent("tpp:meeting-selected", { detail: { meetingId: null } })); return; }
   const attendanceQuery = query(collection(db, "meetingAttendance"), where("meetingId", "==", meetingId));
   attendanceUnsubscribe = onSnapshot(attendanceQuery, (snapshot) => {
     selectedAttendance = snapshot.docs.map((entry) => normalizeAttendanceRecord({ id: entry.id, ...entry.data() }))
@@ -309,11 +328,12 @@ function subscribeMeetings() {
   meetingsUnsubscribe = onSnapshot(collection(db, "meetings"), (snapshot) => {
     meetings = snapshot.docs.map((entry) => normalizeMeetingRecord({ id: entry.id, ...entry.data() }))
       .sort((a, b) => timestampValue(b.scheduledStart) - timestampValue(a.scheduledStart));
-    if (selectedMeetingId && !meetings.some((meeting) => meeting.id === selectedMeetingId)) selectedMeetingId = null;
-    if (!selectedMeetingId && meetings.length) selectedMeetingId = meetings.find((meeting) => ["checkin_open", "in_session", "recessed"].includes(meeting.status))?.id || meetings[0].id;
+    const visible = meetings.filter(meeting => !meeting.deleted);
+    if (selectedMeetingId && !visible.some(meeting => meeting.id === selectedMeetingId)) selectedMeetingId = null;
+    if (!selectedMeetingId && visible.length) selectedMeetingId = visible.find(meeting => ["checkin_open", "in_session", "recessed"].includes(meeting.status))?.id || visible[0].id;
     renderMeetingList();
     renderMeetingDetail();
-    if (selectedMeetingId) subscribeAttendance(selectedMeetingId);
+    subscribeAttendance(selectedMeetingId);
   }, (error) => {
     console.warn("Meeting listener closed", error);
     const list = $("#phase5-meeting-list");
@@ -321,14 +341,47 @@ function subscribeMeetings() {
   });
 }
 
+
+async function changeMeetingTrash(meetingId, deleting) {
+  if (!isFounder(currentProfile)) throw new Error("Only the Founder can delete or restore meetings.");
+  const meetingRef = doc(db, "meetings", meetingId);
+  const auditRef = doc(collection(db, "auditEvents"));
+  await runTransaction(db, async transaction => {
+    const snapshot = await transaction.get(meetingRef);
+    if (!snapshot.exists()) throw new Error("This meeting no longer exists.");
+    const record = snapshot.data();
+    if (record.recordStatus === "certified" || record.activeVoteId) throw new Error("Certified records and meetings with an active vote cannot be deleted.");
+    if (deleting && (record.deleted || !["scheduled", "cancelled", "adjourned"].includes(record.status))) throw new Error("Close or cancel this meeting before deleting it.");
+    if (!deleting && !record.deleted) throw new Error("This meeting is not in Trash.");
+    const status = deleting ? "cancelled" : record.deletedPreviousStatus;
+    if (!["scheduled", "cancelled", "adjourned"].includes(status)) throw new Error("The original status cannot be restored.");
+    transaction.update(meetingRef, {
+      status, deleted: deleting,
+      deletedPreviousStatus: deleting ? record.status : record.deletedPreviousStatus,
+      deletedAt: deleting ? serverTimestamp() : null,
+      deletedBy: deleting ? currentProfile.uid : null,
+      updatedAt: serverTimestamp(), updatedBy: currentProfile.uid
+    });
+    transaction.set(auditRef, {
+      action: deleting ? "meeting_moved_to_trash" : "meeting_restored",
+      actorUid: currentProfile.uid, meetingId,
+      previousStatus: record.status, status, createdAt: serverTimestamp()
+    });
+  });
+}
+
 async function handleMeetingAction(action, sourceButton = null) {
   const meeting = selectedMeeting();
-  if (!meeting) return;
+  if (!meeting || meetingActionBusy) return;
+  if (action === "trash" && !window.confirm(`Move "${meeting.title || meeting.meetingNumber}" to Trash? It will leave the meeting list. Linked records are retained and the Founder can restore it.`)) return;
+  if (["adjourn", "cancel"].includes(action) && !window.confirm(`${action === "adjourn" ? "Adjourn" : "Cancel"} "${meeting.title || meeting.meetingNumber}"? Attendance will be locked.`)) return;
+  meetingActionBusy = true;
   const message = $("#phase5-action-message");
   setMessage(message, action === "self-checkin" ? "Recording your check-in…" : "Updating meeting…");
   const originalText = sourceButton?.textContent || "";
   if (sourceButton) { sourceButton.disabled = true; if (action === "self-checkin") sourceButton.textContent = "Checking in…"; }
   try {
+    if (action === "trash" || action === "restore") await changeMeetingTrash(meeting.id, action === "trash");
     if (action === "activate") await openMeetingCheckIn(meeting.id, currentProfile);
     if (action === "call") await callMeetingToOrder(meeting.id, currentProfile);
     if (action === "recess") await recessMeeting(meeting.id, currentProfile);
@@ -340,10 +393,11 @@ async function handleMeetingAction(action, sourceButton = null) {
   } catch (error) {
     console.error(error);
     const detail = error?.code === "permission-denied"
-      ? "Check-in was blocked by the currently deployed Firestore rules. Deploy the latest firestore.rules and try again."
+      ? "This action was blocked by the deployed Firestore rules or your permissions. For meeting Trash, the updated firestore.rules must be deployed."
       : (error.message || "The meeting action could not be completed.");
     setMessage(message, detail);
   } finally {
+    meetingActionBusy = false;
     if (sourceButton?.isConnected) { sourceButton.disabled = false; sourceButton.textContent = originalText; }
   }
 }
@@ -402,7 +456,9 @@ function bindEvents() {
   $("#phase5-close-create")?.addEventListener("click", () => { $("#phase5-create-panel").hidden = true; });
   $("#phase5-create-form")?.addEventListener("submit", handleCreateMeeting);
   $("#phase5-search")?.addEventListener("input", renderMeetingList);
-  $("#phase5-status-filter")?.addEventListener("change", renderMeetingList);
+  $("#phase5-status-filter")?.addEventListener("change", () => {
+    selectedMeetingId = null; subscribeAttendance(null); renderMeetingList();
+  });
   $("#phase5-meeting-list")?.addEventListener("click", (event) => {
     const button = event.target.closest("[data-meeting-id]");
     if (!button) return;
@@ -432,6 +488,8 @@ async function initialize(profile) {
   ensureMeetingView();
   directory = await listBoardDirectory(profile).catch(() => []);
   renderInviteGrid();
+  const trashOption = $('#phase5-status-filter option[value="deleted"]');
+  if (trashOption) trashOption.hidden = !isFounder(profile);
   bindEvents();
   subscribeMeetings();
 }
