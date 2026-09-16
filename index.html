@@ -14,9 +14,10 @@
   <link rel="stylesheet" href="./phase8.css?v=20260822-stable8" data-phase8-styles="true">
   <link rel="stylesheet" href="./phase9.css?v=20260822-stable8" data-phase9-styles="true">
   <link rel="stylesheet" href="./phase10.css?v=20260822-stable8" data-phase10-styles="true">
-  <link rel="stylesheet" id="tpp-portal-theme-v3" href="./portal-theme-v3.css?v=20260822-stable8">
+  <link rel="stylesheet" id="tpp-portal-theme-v3" href="./portal-theme-v3.css?v=20260916-workspace">
 </head>
 <body>
+  <a class="skip-link" href="#main-content">Skip to main content</a>
   <div class="page-shell">
     <header class="site-header">
       <a class="brand" href="./" aria-label="The Prayer Project Board of Directors Portal">
@@ -26,13 +27,13 @@
       <span class="environment-badge">Governance System</span>
     </header>
 
-    <main>
+    <main id="main-content" tabindex="-1">
       <section id="signed-out-view" class="login-layout" aria-labelledby="login-title">
         <div class="login-copy">
           <p class="eyebrow">BOARD GOVERNANCE</p>
-          <h1 id="login-title">Director access starts here.</h1>
-          <p>This private portal manages Board identity, director records, Google-linked documents, notices, meetings, voting, resolutions, and permanent governance records.</p>
-          <div class="status-card"><span class="status-dot"></span><div><strong>Board workspace active</strong><span>Accounts are Founder-created. Directors sign in with their full name and four-digit PIN after first activation.</span></div></div>
+          <h1 id="login-title">Your Board. One workspace.</h1>
+          <p>Prepare for meetings, review Board documents, and take part in decisions—all in one secure workspace.</p>
+          <div class="status-card"><span class="status-dot"></span><div><strong>For members of the Board</strong><span>Sign in with your full name, then your four-digit PIN. New directors will need the activation code provided by the Founder.</span></div></div>
         </div>
 
         <div class="login-card" aria-label="Director sign in">
@@ -40,7 +41,7 @@
           <form id="login-form" novalidate>
             <div id="name-field" class="field-group"><label for="full-name">Full name</label><input id="full-name" name="fullName" autocomplete="name" placeholder="Enter your full name" required></div>
             <div id="activation-field" class="field-group" hidden><label for="activation-code">Activation code</label><input id="activation-code" name="activationCode" autocomplete="one-time-code" maxlength="14" placeholder="XXXX-XXXX-XXXX"><small>Your one-time activation code is provided by the Founder Director.</small></div>
-            <div id="pin-field" class="field-group" hidden><label for="pin">4-digit PIN</label><input id="pin" name="pin" inputmode="numeric" autocomplete="current-password" pattern="[0-9]{4}" maxlength="4" placeholder="••••"></div>
+            <div id="pin-field" class="field-group" hidden><label for="pin">4-digit PIN</label><input id="pin" type="password" name="pin" inputmode="numeric" autocomplete="current-password" pattern="[0-9]{4}" maxlength="4" placeholder="••••"></div>
             <button id="continue-button" type="submit">Continue</button>
             <button id="activation-recovery-button" class="text-button" type="button" hidden>I already created my PIN</button>
             <button id="login-back-button" class="text-button" type="button" hidden>Use a different name</button>
@@ -49,18 +50,19 @@
 
           <form id="pin-setup-form" hidden novalidate>
             <div class="setup-banner"><span>ACCOUNT ACTIVATION</span><strong id="pin-setup-name">Director</strong><small>Create the four-digit PIN you will use for future Board Portal sign-ins.</small></div>
-            <label for="new-pin">New 4-digit PIN</label><input id="new-pin" name="newPin" inputmode="numeric" autocomplete="new-password" pattern="[0-9]{4}" maxlength="4" placeholder="••••" required>
-            <label for="confirm-pin">Confirm PIN</label><input id="confirm-pin" name="confirmPin" inputmode="numeric" autocomplete="new-password" pattern="[0-9]{4}" maxlength="4" placeholder="••••" required>
+            <label for="new-pin">New 4-digit PIN</label><input id="new-pin" type="password" name="newPin" inputmode="numeric" autocomplete="new-password" pattern="[0-9]{4}" maxlength="4" placeholder="••••" required>
+            <label for="confirm-pin">Confirm PIN</label><input id="confirm-pin" type="password" name="confirmPin" inputmode="numeric" autocomplete="new-password" pattern="[0-9]{4}" maxlength="4" placeholder="••••" required>
             <button id="save-pin-button" type="submit">Activate Board Account</button><p id="pin-setup-message" class="form-message" role="status"></p>
           </form>
-          <div class="security-note"><strong>Authorized Board access only.</strong><span>Portal actions may be recorded. PINs are never stored in Cloud Firestore. Temporary activation codes are retained only in the Founder-protected recovery vault so an account can be activated without creating duplicates.</span></div>
+          <div class="security-note"><strong>Authorized Board access only.</strong><span>Keep your PIN private. Board actions may be recorded. Contact the Founder if you need an activation code or help accessing your account.</span></div>
         </div>
       </section>
 
       <section id="signed-in-view" class="portal-view" hidden>
         <aside class="sidebar">
+          <button id="board-menu-toggle" class="secondary-button board-menu-toggle" type="button" aria-expanded="false" aria-controls="board-navigation">Browse workspace <span aria-hidden="true">☰</span></button>
           <div class="sidebar-title"><span class="brand-mark small">TPP</span><div><strong id="account-name">Board Portal</strong><small id="account-role">Director</small></div></div>
-          <nav aria-label="Board portal navigation">
+          <nav id="board-navigation" aria-label="Board portal navigation">
             <button class="nav-item active" type="button" data-view="overview">Overview</button>
             <button class="nav-item" type="button" data-view="documents">Board Documents</button>
             <button class="nav-item" type="button" data-view="meetings">Meetings</button>
@@ -74,6 +76,7 @@
           <div class="portal-topbar"><div><p class="eyebrow">BOARD OF DIRECTORS</p><h1 id="view-title">Governance Overview</h1></div><button id="sign-out-button" class="secondary-button" type="button">Sign out</button></div>
 
           <section id="view-overview" class="portal-section">
+            <div class="workspace-shortcuts" aria-label="Common Board tasks"><div><p class="eyebrow">START HERE</p><h2>Ready for your next Board meeting?</h2><p>Open Meetings to review the schedule, check in when available, and enter the meeting room.</p></div><div class="button-row"><button class="primary-button" type="button" data-open-view="meetings">Open meetings</button><button class="secondary-button" type="button" data-open-view="documents">Review documents</button></div></div>
             <div class="metric-grid">
               <article class="metric"><span>Current Directors</span><strong id="board-total-metric">—</strong><small>Current interim, confirmed, and leave-status Board members.</small></article>
               <article class="metric"><span>Confirmed</span><strong id="board-confirmed-metric">—</strong><small>Directors marked confirmed in the Board directory.</small></article>
@@ -88,7 +91,7 @@
               <article class="panel"><div class="panel-heading"><div><p class="eyebrow">BOARD NOTICES</p><h2>What needs your attention</h2></div></div><div id="dashboard-notices" class="notice-list"><div class="empty-state">Loading Board notices…</div></div></article>
               <article class="panel"><div class="panel-heading"><div><p class="eyebrow">DOCUMENTS</p><h2>Recent Board documents</h2></div><button class="table-action" type="button" data-open-view="documents">Open center</button></div><div id="dashboard-document-list" class="compact-list"><div class="empty-state">Loading documents…</div></div></article>
               <article class="panel"><div class="panel-heading"><div><p class="eyebrow">PORTAL ACCESS</p><h2>Your permissions</h2></div></div><p class="panel-copy">Portal permissions are assigned by the Founder Director. Corporate authority continues to come from governing documents and valid Board actions.</p><div id="profile-permissions" class="chip-list"></div></article>
-              <article class="panel"><div class="panel-heading"><div><p class="eyebrow">ACCOUNT SECURITY</p><h2>Change your PIN</h2></div></div><form id="change-pin-form" class="admin-form compact-form" novalidate><label for="change-pin-new">New 4-digit PIN</label><input id="change-pin-new" name="newPin" inputmode="numeric" autocomplete="new-password" pattern="[0-9]{4}" maxlength="4" placeholder="••••" required><label for="change-pin-confirm">Confirm new PIN</label><input id="change-pin-confirm" name="confirmPin" inputmode="numeric" autocomplete="new-password" pattern="[0-9]{4}" maxlength="4" placeholder="••••" required><button type="submit">Change PIN</button><p id="change-pin-message" class="form-message" role="status"></p></form></article>
+              <article class="panel"><div class="panel-heading"><div><p class="eyebrow">ACCOUNT SECURITY</p><h2>Change your PIN</h2></div></div><form id="change-pin-form" class="admin-form compact-form" novalidate><label for="change-pin-new">New 4-digit PIN</label><input id="change-pin-new" type="password" name="newPin" inputmode="numeric" autocomplete="new-password" pattern="[0-9]{4}" maxlength="4" placeholder="••••" required><label for="change-pin-confirm">Confirm new PIN</label><input id="change-pin-confirm" type="password" name="confirmPin" inputmode="numeric" autocomplete="new-password" pattern="[0-9]{4}" maxlength="4" placeholder="••••" required><button type="submit">Change PIN</button><p id="change-pin-message" class="form-message" role="status"></p></form></article>
             </div>
           </section>
 
@@ -156,6 +159,6 @@
     </main>
 
   </div>
-  <script type="module" src="./js/boot-stable.js?v=20260822-stable8"></script>
+  <script type="module" src="./js/boot-stable.js?v=20260916-workspace"></script>
 </body>
 </html>
