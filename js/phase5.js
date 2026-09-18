@@ -25,6 +25,7 @@ import {
   updateMeetingAttendance
 } from "./meeting-data.js?v=20260822-stable8";
 import { hasPermission, PERMISSIONS } from "./permissions.js";
+import { openMeetingEditor } from "./meeting-editor.js?v=20260918-1";
 
 let currentProfile = null;
 let meetings = [];
@@ -268,6 +269,7 @@ function renderMeetingDetail() {
   const locked = ["adjourned", "cancelled"].includes(meeting.status);
 
   const controls = [];
+  if (isFounder(currentProfile) && meeting.status === "scheduled" && !meeting.deleted) controls.push('<button class="meeting-primary-button" data-meeting-action="edit">Edit meeting setup</button>');
   const canTrash = isFounder(currentProfile) && !meeting.deleted && ["scheduled", "cancelled", "adjourned"].includes(meeting.status) && meeting.recordStatus !== "certified" && !meeting.activeVoteId;
   if (canTrash) controls.push('<button class="meeting-danger-button" data-meeting-action="trash">Delete meeting…</button>');
   if (isFounder(currentProfile) && meeting.deleted) controls.push('<button class="meeting-secondary-button" data-meeting-action="restore">Restore meeting</button>');
@@ -381,6 +383,7 @@ async function handleMeetingAction(action, sourceButton = null) {
   const originalText = sourceButton?.textContent || "";
   if (sourceButton) { sourceButton.disabled = true; if (action === "self-checkin") sourceButton.textContent = "Checking in…"; }
   try {
+    if (action === "edit") await openMeetingEditor({ meeting, profile: currentProfile, directory });
     if (action === "trash" || action === "restore") await changeMeetingTrash(meeting.id, action === "trash");
     if (action === "activate") await openMeetingCheckIn(meeting.id, currentProfile);
     if (action === "call") await callMeetingToOrder(meeting.id, currentProfile);
@@ -389,7 +392,7 @@ async function handleMeetingAction(action, sourceButton = null) {
     if (action === "adjourn") await adjournMeeting(meeting.id, currentProfile);
     if (action === "cancel") await cancelMeeting(meeting.id, currentProfile);
     if (action === "self-checkin") await checkIntoMeeting(meeting.id, currentProfile);
-    setMessage(message, action === "self-checkin" ? "Check-in recorded." : "Meeting updated.");
+    if (action !== "edit") setMessage(message, action === "self-checkin" ? "Check-in recorded." : "Meeting updated.");
   } catch (error) {
     console.error(error);
     const detail = error?.code === "permission-denied"
