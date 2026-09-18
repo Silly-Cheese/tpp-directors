@@ -370,10 +370,31 @@ service cloud.firestore {
         );
     }
 
+    // Founder setup editor. Meeting structure locks when check-in opens.
+    function meetingSetupEdit() {
+      return founder()
+        && resource.data.status == 'scheduled'
+        && request.resource.data.status == 'scheduled'
+        && resource.data.recordStatus == 'uncertified'
+        && resource.data.activeVoteId == null
+        && request.resource.data.title is string
+        && request.resource.data.meetingType in ['regular','special','emergency','annual']
+        && request.resource.data.scheduledFor is string
+        && request.resource.data.locationMode in ['in_person','virtual','hybrid']
+        && request.resource.data.invitedDirectorUids is list
+        && request.resource.data.eligibleVotingDirectorUids is list
+        && request.resource.data.quorumRequired is int
+        && request.resource.data.quorumRequired > 0
+        && request.resource.data.quorumRequired <= request.resource.data.eligibleVotingDirectorUids.size()
+        && request.resource.data.updatedAt == request.time
+        && request.resource.data.updatedBy == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['title','meetingType','scheduledFor','locationMode','locationLabel','notes','invitedDirectorUids','eligibleVotingDirectorUids','quorumRequired','updatedAt','updatedBy']);
+    }
+
     match /meetings/{id} {
       allow get, list: if cap('meetings.view');
       allow create: if meetingCreate();
-      allow update: if activateMeeting() || controlMeeting() || acquireVoteLock(id) || releaseVoteLock() || certifyMeeting(id) || meetingTrash();
+      allow update: if activateMeeting() || controlMeeting() || acquireVoteLock(id) || releaseVoteLock() || certifyMeeting(id) || meetingTrash() || meetingSetupEdit();
       allow delete: if false;
     }
 
@@ -387,6 +408,24 @@ service cloud.firestore {
         && request.resource.data.presenceStatus == 'invited'
         && request.resource.data.createdAt == request.time && request.resource.data.updatedAt == request.time;
     }
+    function founderRosterCreate(id) {
+      return founder()
+        && request.resource.data.meetingId is string
+        && request.resource.data.directorUid is string
+        && id == request.resource.data.meetingId + '_' + request.resource.data.directorUid
+        && meetingAfter(request.resource.data.meetingId).status == 'scheduled'
+        && request.resource.data.directorUid in meetingAfter(request.resource.data.meetingId).invitedDirectorUids
+        && request.resource.data.presenceStatus == 'invited'
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time
+        && request.resource.data.updatedBy == request.auth.uid;
+    }
+    function founderRosterDelete() {
+      return founder()
+        && meetingAfter(resource.data.meetingId).status == 'scheduled'
+        && !(resource.data.directorUid in meetingAfter(resource.data.meetingId).invitedDirectorUids);
+    }
+
     function selfCheckIn() {
       return active() && resource.data.directorUid == request.auth.uid
         && meeting(resource.data.meetingId).status in ['checkin_open','in_session','recessed']
@@ -410,9 +449,9 @@ service cloud.firestore {
     }
     match /meetingAttendance/{id} {
       allow get, list: if cap('meetings.view');
-      allow create: if attendanceCreate(id);
+      allow create: if attendanceCreate(id) || founderRosterCreate(id);
       allow update: if selfCheckIn() || attendanceManage();
-      allow delete: if false;
+      allow delete: if founderRosterDelete();
     }
 
     function agendaCreate() {
@@ -442,11 +481,30 @@ service cloud.firestore {
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','updatedAt','updatedBy'])
         && ((cap('votes.push') && request.resource.data.status == 'active') || (cap('votes.close') && request.resource.data.status == 'completed'));
     }
+    function founderAgendaEdit() {
+      return founder()
+        && resource.data.status == 'queued'
+        && request.resource.data.status == 'queued'
+        && meeting(resource.data.meetingId).status == 'scheduled'
+        && request.resource.data.meetingId == resource.data.meetingId
+        && request.resource.data.title is string
+        && request.resource.data.itemType in ['business','report','motion','resolution','election','other']
+        && request.resource.data.order is int
+        && request.resource.data.updatedAt == request.time
+        && request.resource.data.updatedBy == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['title','description','itemType','order','agendaNumber','documentId','updatedAt','updatedBy']);
+    }
+    function founderAgendaDelete() {
+      return founder()
+        && resource.data.status == 'queued'
+        && meeting(resource.data.meetingId).status == 'scheduled';
+    }
+
     match /agendaItems/{id} {
       allow get, list: if cap('meetings.view');
       allow create: if agendaCreate();
-      allow update: if agendaManage() || agendaMotion() || agendaVote();
-      allow delete: if false;
+      allow update: if agendaManage() || agendaMotion() || agendaVote() || founderAgendaEdit();
+      allow delete: if founderAgendaDelete();
     }
 
     function motionCreate() {
