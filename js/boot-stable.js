@@ -1,10 +1,10 @@
 // Deterministic Board Portal bootstrap.
 // Critical live-governance modules mount first; the main app/router comes last.
-const RELEASE = "20260822-stable8";
+const RELEASE = "20260918-meeting-editor";
 
 async function boot() {
   try {
-    await import("./phase5.js?v=20260916-meeting-trash");
+    await import("./phase5.js?v=20260918-meeting-editor");
     await import(`./phase6.js?v=${RELEASE}`);
     await import(`./app.js?v=${RELEASE}`);
     window.__TPP_BOOT_RELEASE__ = RELEASE;
