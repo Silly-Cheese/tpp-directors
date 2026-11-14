@@ -590,7 +590,11 @@ service cloud.firestore {
         || (cap('votes.view') && data.ballotVisibility == 'recorded' && vote(data.voteId).status == 'closed');
     }
     match /voteBallots/{id} {
-      allow get, list: if readBallot(resource.data);
+      // A first ballot needs a direct read of its empty {voteId}_{uid} slot.
+      // Vote IDs are Firestore-generated and do not contain underscores.
+      allow get: if (resource == null && cap('votes.cast') && id == id.split('_')[0] + '_' + request.auth.uid)
+        || readBallot(resource.data);
+      allow list: if readBallot(resource.data);
       allow create: if cap('votes.cast') && request.resource.data.voteId is string && request.resource.data.voterUid == request.auth.uid
         && id == request.resource.data.voteId + '_' + request.auth.uid
         && vote(request.resource.data.voteId).status == 'open' && request.auth.uid in vote(request.resource.data.voteId).eligibleVoterUids
